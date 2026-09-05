@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0a0e17] text-slate-100 antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f293d;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* Hide scrollbar for tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
+/* Leaflet Custom Styling for Dark Tactical Map */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background-color: #0a0e17 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* 100% Free Watermark-Free Tactical Dark Map Layer (Inverts OpenStreetMap to Cyberpunk Dark) */
+.dark-tactical-tiles {
+  filter: invert(100%) hue-rotate(190deg) brightness(85%) contrast(110%) saturate(40%) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid #1f293d !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 10px !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background-color: #111827 !important;
+  border: 1px solid #1f293d !important;
+}
+
+/* Marker Glow & Pulse Animations */
+@keyframes markerPulseCrit {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes markerPulseHigh {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.8); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 14px rgba(249, 115, 22, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+}
+
+.pulsing-marker-critical {
+  animation: markerPulseCrit 1.8s infinite;
+}
+
+.pulsing-marker-high {
+  animation: markerPulseHigh 2.2s infinite;
+}
+
+/* Tactical HUD Scanline */
+.tactical-scanline {
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 3px, 6px 100%;
+}
