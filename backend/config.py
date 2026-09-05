@@ -44,8 +44,8 @@ CORS_ORIGINS: list[str] = [
 # Override with 127.0.0.1 if you want to restrict to localhost only.
 SERVER_HOST: str = os.getenv("SERVER_HOST", "0.0.0.0")
 
-# Port for the uvicorn server.
-SERVER_PORT: int = int(os.getenv("SERVER_PORT", "8000"))
+# Port for the uvicorn server (reads Render PORT env var or SERVER_PORT)
+SERVER_PORT: int = int(os.getenv("PORT", os.getenv("SERVER_PORT", "8000")))
 
 # Node identity (useful for multi-machine logging)
 NODE_ID: str = os.getenv("NODE_ID", "node-01")
