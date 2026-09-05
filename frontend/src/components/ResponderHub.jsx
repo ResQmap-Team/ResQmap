@@ -70,6 +70,8 @@ export default function ResponderHub() {
   const [connectionStatus, setConnectionStatus] = useState('IDLE');
   const [copiedRoomId, setCopiedRoomId] = useState(false);
   const [activeFeedId, setActiveFeedId] = useState(null);  // backend DBLiveFeed.id for current broadcast
+  const [activeBroadcastRoomId, setActiveBroadcastRoomId] = useState(''); // exact PeerJS ID currently assigned
+  const [customRoomInput, setCustomRoomInput] = useState('');
 
   // ── GPS state ─────────────────────────────────────────────────────────────
   // Responder identity (needed to PATCH location to the right DB record)
@@ -155,7 +157,8 @@ export default function ResponderHub() {
 
   const incident = activeResponderIncident || incidents[0];
   const prioConf = PRIORITY_CONFIG[incident?.priority] || SEVERITY_CONFIG[incident?.severity] || PRIORITY_CONFIG.P1;
-  const currentRoomId = incident ? liveStreamService.getPeerRoomId(incident.id) : 'resqnet-stream';
+  const defaultRoomId = incident ? liveStreamService.getPeerRoomId(incident.id) : 'resqnet-stream';
+  const displayRoomId = activeBroadcastRoomId || defaultRoomId;
 
   // Cleanup WebRTC and local camera on unmount
   useEffect(() => {
@@ -168,15 +171,27 @@ export default function ResponderHub() {
     };
   }, [cameraStream]);
 
-  // LIFECYCLE FIX: attach cameraStream to the <video> element AFTER React has
-  // mounted it (i.e. after streamMode === 'broadcast' triggers a re-render).
-  // The handler sets cameraStream + streamMode; this effect fires on the next
-  // paint when localVideoRef.current is guaranteed non-null.
+  // Attach local cameraStream to <video> element
   useEffect(() => {
     if (cameraStream && localVideoRef.current) {
       localVideoRef.current.srcObject = cameraStream;
+      localVideoRef.current.play().catch(e => console.warn('Local play error:', e));
     }
-  }, [cameraStream]); // runs whenever stream is acquired or cleared
+  }, [cameraStream, streamMode]);
+
+  // Attach remote video stream to <video> element with safe mobile playback
+  useEffect(() => {
+    if (remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(err => {
+        console.warn('[ResponderHub] Autoplay with audio restricted on mobile, retrying muted...', err);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().catch(e => console.error('Playback error:', e));
+        }
+      });
+    }
+  }, [remoteStream, streamMode]);
 
   // Start Broadcasting from this device's camera (Responder role)
   const handleStartBroadcast = async () => {
@@ -187,15 +202,10 @@ export default function ResponderHub() {
         audio: true
       });
 
-      // Switch to broadcast mode FIRST so React renders the <video> element,
-      // then cameraStream state triggers the useEffect above to attach srcObject.
       setStreamMode('broadcast');
       setIsBroadcasting(true);
-      setCameraStream(stream); // <-- triggers the useEffect after next render
+      setCameraStream(stream);
 
-      // Pass real metadata so the backend can register an authenticated feed record.
-      // responderId comes from the GPS panel ID input; gpsPosition may be null if GPS
-      // is not yet active — backend fields are all nullable so this is safe.
       const meta = {
         responderId: responderId || null,
         latitude:    gpsPosition?.latitude  ?? null,
@@ -206,8 +216,8 @@ export default function ResponderHub() {
         setViewerCount(count);
       }, meta);
 
-      // Store the backend feed ID so we can mark the feed ENDED on stop
       setActiveFeedId(result?.feedId ?? null);
+      setActiveBroadcastRoomId(result?.roomId ?? defaultRoomId);
       setConnectionStatus('LIVE_BROADCASTING');
     } catch (err) {
       console.warn('Could not start camera broadcast:', err);
@@ -215,100 +225,78 @@ export default function ResponderHub() {
       setStreamMode('idle');
       setIsBroadcasting(false);
       setActiveFeedId(null);
+      setActiveBroadcastRoomId('');
       setConnectionStatus('ERROR');
     }
   };
 
-
   // Stop Broadcasting
   const handleStopBroadcast = () => {
-    liveStreamService.stopBroadcast();  // internally calls PATCH /api/feeds/{id} → ENDED
+    liveStreamService.stopBroadcast();
     if (cameraStream) {
       cameraStream.getTracks().forEach(t => t.stop());
       setCameraStream(null);
     }
     setIsBroadcasting(false);
     setActiveFeedId(null);
+    setActiveBroadcastRoomId('');
     setStreamMode('idle');
     setConnectionStatus('IDLE');
     setViewerCount(0);
   };
 
-  // Watch a colleague's live stream.
-  // If a real feed is selected from the discovery panel, join by its peer_room_id directly.
-  // Otherwise fall back to the incident-derived room ID (legacy path).
+  // Watch a colleague's live stream by Feed or direct Room ID
   const handleWatchFeed = async (feedToWatch = null) => {
     const targetFeed = feedToWatch || selectedFeed;
+    const targetRoomId = targetFeed?.peer_room_id || defaultRoomId;
     try {
       setConnectionStatus('CONNECTING_PEER');
       setStreamMode('watch');
       setIsWatchingLive(true);
       if (feedToWatch) setSelectedFeed(feedToWatch);
 
-      // Use the real peer_room_id from the backend feed record when available.
-      // joinBroadcast internally calls getPeerRoomId(id) which sanitises the id,
-      // so we pass the peer_room_id directly to a wrapper path OR pass the incident id
-      // for the existing flow. To support real feed room IDs without modifying
-      // liveStreamService, we call peer.call(targetRoomId) using the feed's peer_room_id.
-      const roomId = targetFeed?.peer_room_id || null;
-
-      if (roomId) {
-        // Direct room join using the real backend-registered peer_room_id
-        await _watchByRoomId(roomId);
-      } else {
-        // Legacy: derive room from incident ID
-        await liveStreamService.joinBroadcast(
-          incident.id,
-          (stream) => {
-            setRemoteStream(stream);
-            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
-            setConnectionStatus('CONNECTED_WATCHING');
-          },
-          (status) => {
-            if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
-            else if (status === 'ERROR') setConnectionStatus('FAILED');
-          }
-        );
-      }
+      await liveStreamService.joinBroadcastByRoomId(
+        targetRoomId,
+        (stream) => {
+          setRemoteStream(stream);
+          setConnectionStatus('CONNECTED_WATCHING');
+        },
+        (status) => {
+          if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
+          else if (status === 'ERROR') setConnectionStatus('FAILED');
+        }
+      );
     } catch (err) {
       console.warn('Could not connect to feed:', err);
       setConnectionStatus('FAILED');
     }
   };
 
-  // Internal helper: watch an arbitrary peer room ID without going through incident lookup
-  const _watchByRoomId = (roomId) => {
-    return new Promise((resolve, reject) => {
-      liveStreamService.disconnectWatcher();
-      liveStreamService.isWatching = true;
-      const Peer = window.Peer || liveStreamService.peer?.constructor;
-      // Use liveStreamService.joinBroadcast with a synthetic incident ID whose
-      // getPeerRoomId() normalisation produces exactly the desired roomId.
-      // Since liveStreamService.getPeerRoomId strips non-alnum and lowercases,
-      // we reconstruct an ID that when sanitised gives back the real room ID.
-      // The simplest approach: hijack joinBroadcast via the import-level singleton,
-      // patching the targetRoomId before it connects.
-      const origGetPeerRoomId = liveStreamService.getPeerRoomId.bind(liveStreamService);
-      liveStreamService.getPeerRoomId = () => roomId;
-      liveStreamService.joinBroadcast(
-        '__direct__',
+  // Join custom room ID entered by user
+  const handleJoinCustomRoom = async (roomIdToJoin = customRoomInput) => {
+    if (!roomIdToJoin || !roomIdToJoin.trim()) return;
+    const targetRoom = roomIdToJoin.trim();
+    try {
+      setConnectionStatus('CONNECTING_PEER');
+      setStreamMode('watch');
+      setIsWatchingLive(true);
+      setSelectedFeed(null);
+
+      await liveStreamService.joinBroadcastByRoomId(
+        targetRoom,
         (stream) => {
-          liveStreamService.getPeerRoomId = origGetPeerRoomId;
           setRemoteStream(stream);
-          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream;
           setConnectionStatus('CONNECTED_WATCHING');
-          resolve(stream);
         },
         (status) => {
-          liveStreamService.getPeerRoomId = origGetPeerRoomId;
           if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
           else if (status === 'ERROR') setConnectionStatus('FAILED');
         }
-      ).catch((err) => {
-        liveStreamService.getPeerRoomId = origGetPeerRoomId;
-        reject(err);
-      });
-    });
+      );
+    } catch (err) {
+      console.warn('Could not connect to room:', err);
+      setConnectionStatus('FAILED');
+    }
   };
 
   // Legacy "Watch Colleague Feed" button (joins incident-derived room)
@@ -319,12 +307,16 @@ export default function ResponderHub() {
     liveStreamService.disconnectWatcher();
     setRemoteStream(null);
     setIsWatchingLive(false);
+    setSelectedFeed(null);
     setStreamMode('idle');
     setConnectionStatus('IDLE');
   };
 
   const handleCopyRoomLink = () => {
-    navigator.clipboard?.writeText(window.location.href);
+    const code = displayRoomId;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code);
+    }
     setCopiedRoomId(true);
     setTimeout(() => setCopiedRoomId(false), 2000);
   };
@@ -386,11 +378,11 @@ export default function ResponderHub() {
         <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-slate-300">
             <Cast className="w-3.5 h-3.5 text-sky-400" />
-            <span>Room: <b>{currentRoomId}</b></span>
+            <span>Room: <b className="text-sky-300">{displayRoomId}</b></span>
             <button
               onClick={handleCopyRoomLink}
-              title="Copy Link for Colleagues"
-              className="p-1 hover:text-white text-slate-400"
+              title="Copy Room ID for Colleagues"
+              className="p-1 hover:text-white text-slate-400 flex items-center gap-1"
             >
               {copiedRoomId ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
             </button>
@@ -452,7 +444,7 @@ export default function ResponderHub() {
                   <div>
                     <h4 className="text-sm font-bold text-white">Connecting to Colleague's Live Camera Feed...</h4>
                     <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Waiting for responder on scene to broadcast from Room <code className="text-sky-300 font-mono">{currentRoomId}</code>.
+                      Waiting for responder on scene to broadcast from Room <code className="text-sky-300 font-mono">{displayRoomId}</code>.
                     </p>
                   </div>
                   <span className="text-[10px] font-mono bg-sky-950/80 text-sky-300 px-3 py-1 rounded-full border border-sky-600/40 animate-pulse">
@@ -646,22 +638,61 @@ export default function ResponderHub() {
           </div>
 
           {/* Multi-Peer Colleague Broadcast Status Box */}
-          <div className="bg-[#111827] border border-[#1f293d] rounded-2xl p-4 shadow-xl space-y-2">
+          <div className="bg-[#111827] border border-[#1f293d] rounded-2xl p-4 shadow-xl space-y-3">
             <h3 className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
               <Cast className="w-4 h-4 text-sky-400" />
               Multi-Device Live Stream Hub
             </h3>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              When a responder on scene starts their live camera broadcast on their phone, any team member or commander on another phone/laptop can tap <b>"Watch Colleague Feed"</b> to see the live feed in real-time over WebRTC!
+              When a responder starts broadcasting on their phone, any team member or commander on another phone/laptop can tap <b>"Watch Colleague Feed"</b> or join by Room Code to view the live camera feed in real-time over WebRTC.
             </p>
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
-              <span className="text-slate-400">Stream Status:</span>
-              <span className="font-mono font-bold text-emerald-400">
-                {isBroadcasting ? `🔴 Broadcasting (${viewerCount} Connected)` :
-                 isWatchingLive ? `📡 Watching Colleague` :
-                 `Standby`}
-              </span>
+
+            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Stream Status:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {isBroadcasting ? `🔴 Broadcasting (${viewerCount} Connected)` :
+                   isWatchingLive ? `📡 Watching Colleague` :
+                   `Standby`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span className="text-slate-400 text-[11px]">Active Room Code:</span>
+                <div className="flex items-center gap-1.5 font-mono text-sky-300 font-bold text-[11px]">
+                  <span>{displayRoomId}</span>
+                  <button
+                    onClick={handleCopyRoomLink}
+                    title="Copy Room ID"
+                    className="p-1 hover:text-white text-slate-400"
+                  >
+                    {copiedRoomId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Direct Room Code Input & Join */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-slate-400">Join Room by Code:</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. resqnet-rqn1042"
+                  value={customRoomInput}
+                  onChange={(e) => setCustomRoomInput(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-sky-500"
+                />
+                <button
+                  onClick={() => handleJoinCustomRoom(customRoomInput)}
+                  disabled={!customRoomInput.trim()}
+                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl flex items-center gap-1 transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Join</span>
+                </button>
+              </div>
+            </div>
+
             {activeFeedId && (
               <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-700/30 text-[10px] font-mono text-emerald-400 flex items-center justify-between">
                 <span className="text-slate-400">Feed ID (backend):</span>
