@@ -29,13 +29,15 @@ function MainAppContent() {
         {/* Metric Triage Counters with P0-P3 and Cluster Status */}
         <StatsBar />
 
-        {/* Dynamic Views */}
-        {activeView === 'map' && <LiveMap />}
-        {activeView === 'reports' && <AllReportsView />}
-        {activeView === 'responder' && <ResponderHub />}
-        {activeView === 'volunteers' && <VolunteerHub />}
-        {activeView === 'analytics' && <AnalyticsView />}
-        {activeView === 'sos' && <SOSQueueView />}
+        {/* Dynamic Views with Smooth Transition */}
+        <div key={activeView} className="view-transition">
+          {activeView === 'map' && <LiveMap />}
+          {activeView === 'reports' && <AllReportsView />}
+          {activeView === 'responder' && <ResponderHub />}
+          {activeView === 'volunteers' && <VolunteerHub />}
+          {activeView === 'analytics' && <AnalyticsView />}
+          {activeView === 'sos' && <SOSQueueView />}
+        </div>
 
         {/* Global Modals & Slide-overs */}
         <IncidentDrawer />

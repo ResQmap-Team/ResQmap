@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-[#0a0e17] text-slate-100 antialiased;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply bg-[#070b12] text-slate-100 antialiased selection:bg-rose-500 selection:text-white;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 }
 
@@ -15,14 +18,14 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0e17;
+  background: #070b12;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f293d;
+  background: #1e293b;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #334155;
 }
 
 /* Hide scrollbar for tabs */
@@ -34,12 +37,47 @@
   scrollbar-width: none;
 }
 
+/* Modern Glass & Fluid UI Utilities */
+.glass-panel {
+  background: rgba(13, 19, 31, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(17, 24, 39, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Smooth Fade & Slide Transitions for Dynamic Views */
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-transition {
+  animation: viewFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
 
 /* Leaflet Custom Styling for Dark Tactical Map */
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background-color: #0a0e17 !important;
+  background-color: #070b12 !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
@@ -52,8 +90,8 @@
   background-color: #111827 !important;
   color: #f3f4f6 !important;
   border: 1px solid #1f293d !important;
-  border-radius: 12px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.7) !important;
   padding: 0 !important;
 }
 

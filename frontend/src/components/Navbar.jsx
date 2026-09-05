@@ -42,22 +42,22 @@ export default function Navbar() {
 
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0a0e17]/95 backdrop-blur-md border-b border-[#1f293d] shadow-lg">
+    <header className="sticky top-0 z-[2000] bg-[#070b14]/90 backdrop-blur-xl border-b border-white/[0.08] shadow-2xl">
       {/* Emergency Broadcast Ticker */}
-      <div className="bg-gradient-to-r from-rose-950 via-slate-900 to-rose-950 px-4 py-1 border-b border-rose-900/40 text-xs flex items-center justify-between text-rose-300">
+      <div className="bg-gradient-to-r from-rose-950/80 via-slate-950 to-rose-950/80 px-4 py-1 border-b border-rose-900/30 text-xs flex items-center justify-between text-rose-300">
         <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="flex h-2 w-2 relative">
+          <span className="flex h-2 w-2 relative shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
           </span>
-          <span className="font-semibold text-rose-400 uppercase tracking-wider text-[10px] bg-rose-900/40 px-1.5 py-0.5 rounded border border-rose-700/50">
+          <span className="font-semibold text-rose-400 uppercase tracking-wider text-[10px] bg-rose-900/40 px-1.5 py-0.5 rounded border border-rose-700/50 shrink-0">
             LIVE TRIAGE FEED
           </span>
           <span className="truncate text-slate-300">
             Active Disasters: <b className="text-rose-400 font-mono">{stats.critical} Critical</b>, <b className="text-amber-400 font-mono">{stats.high} High</b> | First Responders Deployed: <b className="text-emerald-400 font-mono">{stats.activeDispatches} Units</b> | AI False Alarms Blocked: <b className="text-sky-400 font-mono">{stats.falseAlarms}</b>
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-3 font-mono text-[11px] text-slate-400">
+        <div className="hidden md:flex items-center gap-3 font-mono text-[11px] text-slate-400 shrink-0">
           <span className="flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-sky-400" />
             AI Damage Assessment: <span className={geminiApiKey ? "text-emerald-400 font-bold" : "text-sky-400 font-bold"}>{geminiApiKey ? "Active" : "Standard Mode"}</span>
@@ -66,32 +66,31 @@ export default function Navbar() {
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2.5 sm:gap-3">
         {/* Brand with Attached RESQ Firefighter Emblem */}
         <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => setActiveView('map')}>
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-rose-950/40 border border-slate-700 bg-slate-900">
+          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-rose-950/50 border border-slate-700/80 bg-slate-900">
             <img src={resqEmblem} alt="RESQ SINCE 2026" className="w-full h-full object-cover" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0a0e17]"></span>
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#070b14]"></span>
           </div>
-          <div>
+          <div className="hidden min-[380px]:block">
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                 RESQ<span className="text-rose-500 font-mono">MAP</span>
               </span>
-              <span className="text-[9px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded">
-                SINCE 2026
+              <span className="text-[9px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 bg-slate-800/80 text-slate-300 border border-slate-700 rounded">
+                2026
               </span>
             </div>
           </div>
         </div>
 
-
         {/* UNIFIED SINGLE ROW / SLIDER FOR ALL FEATURES */}
-        <nav className="flex-1 min-w-0 flex items-center bg-[#111827] p-1 rounded-xl border border-[#1f293d] overflow-x-auto no-scrollbar gap-1">
+        <nav className="flex-1 min-w-0 flex items-center bg-[#0d1527]/80 backdrop-blur-md p-1 rounded-xl border border-white/[0.08] overflow-x-auto no-scrollbar gap-1">
           {/* 1. Live Response Map */}
           <button
             onClick={() => setActiveView('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'map'
                 ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -104,7 +103,7 @@ export default function Navbar() {
           {/* 2. All Reports Feed */}
           <button
             onClick={() => setActiveView('reports')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'reports'
                 ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -112,7 +111,7 @@ export default function Navbar() {
           >
             <FileText className="w-3.5 h-3.5" />
             <span>All Reports</span>
-            <span className="px-1.5 py-0.2 bg-black/30 rounded-full text-[10px] font-mono">
+            <span className="px-1.5 py-0.2 bg-black/40 rounded-full text-[10px] font-mono">
               {stats.total}
             </span>
           </button>
@@ -120,7 +119,7 @@ export default function Navbar() {
           {/* 3. SOS Priority Queue */}
           <button
             onClick={() => setActiveView('sos')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'sos'
                 ? 'bg-rose-700 text-white shadow-md shadow-rose-700/40 ring-1 ring-rose-500/50'
                 : 'text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-700/20'
@@ -139,7 +138,7 @@ export default function Navbar() {
           {/* 4. Responder Live Feed */}
           <button
             onClick={() => setActiveView('responder')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'responder'
                 ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -155,7 +154,7 @@ export default function Navbar() {
           {/* 5. Volunteer Hub Mesh */}
           <button
             onClick={() => setActiveView('volunteers')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'volunteers'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -171,7 +170,7 @@ export default function Navbar() {
           {/* 6. Fleet Analytics */}
           <button
             onClick={() => setActiveView('analytics')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
               activeView === 'analytics'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -185,7 +184,7 @@ export default function Navbar() {
           <button
             onClick={() => setIsSafeHouseModalOpen(true)}
             title="Find Nearest SafeHouse Shelter"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/40 border border-transparent hover:border-emerald-500/30 transition-all active:scale-95"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/40 border border-transparent hover:border-emerald-500/30 transition-all duration-150 active:scale-95"
           >
             <Home className="w-3.5 h-3.5 text-emerald-400" />
             <span>SafeHouse</span>
@@ -195,7 +194,7 @@ export default function Navbar() {
           <button
             onClick={() => setIsEmergencyContactsOpen(true)}
             title="National & State Emergency Helplines"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-rose-300 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 transition-all active:scale-95"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-rose-300 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 transition-all duration-150 active:scale-95"
           >
             <PhoneCall className="w-3.5 h-3.5 text-rose-400" />
             <span>Helplines</span>
@@ -205,7 +204,7 @@ export default function Navbar() {
           <button
             onClick={() => openGovDispatch()}
             title="Escalate to NDMA / NDRF / State Authorities"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-amber-300 hover:bg-amber-950/40 border border-transparent hover:border-amber-500/30 transition-all active:scale-95"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-amber-300 hover:bg-amber-950/40 border border-transparent hover:border-amber-500/30 transition-all duration-150 active:scale-95"
           >
             <Building2 className="w-3.5 h-3.5 text-amber-400" />
             <span>Gov Forward</span>

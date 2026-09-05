@@ -335,7 +335,7 @@ export default function GovDispatchModal() {
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-tactical-bg/90 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="gov-dispatch-title"
@@ -343,7 +343,7 @@ export default function GovDispatchModal() {
       {/* Tactical scanline for the whole modal background */}
       <div className="absolute inset-0 pointer-events-none tactical-scanline opacity-20"></div>
 
-      <div className="relative w-full max-w-2xl bg-slate-950/80 border border-slate-700 shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden flex flex-col my-6 max-h-[92vh] backdrop-blur-xl">
+      <div className="relative w-full max-w-2xl bg-[#0a0f1d] border border-slate-700 shadow-[0_0_60px_rgba(0,0,0,0.9)] rounded-2xl overflow-hidden flex flex-col my-auto max-h-[88vh] backdrop-blur-2xl">
         
         {/* HUD Corner Brackets */}
         <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-rose-500/50 rounded-tl-xl pointer-events-none"></div>

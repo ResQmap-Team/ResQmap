@@ -246,10 +246,10 @@ export default function LiveMap() {
     <div className="relative w-full h-[calc(100vh-140px)] min-h-[580px] rounded-2xl overflow-hidden border border-[#1f293d] shadow-2xl bg-[#0a0e17]">
       
       {/* Top Filter Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pointer-events-none">
+      <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-[10] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 pointer-events-none">
         
         {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto bg-[#111827]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#1f293d] shadow-xl pointer-events-auto max-w-full">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar glass-panel p-1.5 rounded-2xl shadow-xl pointer-events-auto max-w-full">
           <button
             onClick={() => setFilters(prev => ({ ...prev, hazardCategory: 'ALL' }))}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
@@ -584,16 +584,16 @@ export default function LiveMap() {
 
 
       {/* Floating Bottom Quick Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] hidden sm:flex items-center gap-3 bg-[#111827]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#1f293d] text-[11px] text-slate-300 shadow-xl">
-        <span className="font-semibold text-slate-400 uppercase text-[10px] tracking-wider">Priority (Slide 07):</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> P0 Critical</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> P1 High</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span> P2 Medium</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span> P3 Low</span>
+      <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-[10] hidden sm:flex items-center gap-3 glass-panel px-3 py-1.5 rounded-xl text-[11px] text-slate-300 shadow-xl">
+        <span className="font-semibold text-slate-400 uppercase text-[10px] tracking-wider">Priority:</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> P0 Critical</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> P1 High</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span> P2 Medium</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span> P3 Low</span>
       </div>
 
       {/* Active Incident Counter Pill */}
-      <div className="absolute bottom-4 right-4 z-[1000] bg-[#111827]/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#1f293d] text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
+      <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-[10] glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-slate-300 shadow-xl flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>Displaying <b className="text-white">{filteredIncidents.length}</b> Geotagged Hazards</span>
       </div>

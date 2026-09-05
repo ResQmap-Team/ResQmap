@@ -73,7 +73,7 @@ export default function IncidentDrawer() {
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-[#0d131f] border-l border-[#1f293d] shadow-2xl flex flex-col transition-transform animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-y-0 right-0 z-[9990] w-full max-w-xl bg-[#0d131f] border-l border-[#1f293d] shadow-2xl flex flex-col transition-transform animate-in slide-in-from-right duration-300">
       
       {/* Header */}
       <div className="p-4 border-b border-[#1f293d] bg-[#111827]/90 backdrop-blur-md flex items-center justify-between">
