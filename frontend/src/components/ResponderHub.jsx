@@ -429,27 +429,49 @@ export default function ResponderHub() {
           {streamMode === 'watch' && (
             <>
               {remoteStream ? (
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className={`w-full h-full object-cover ${
-                    hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
-                    hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
-                  }`}
-                />
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className={`w-full h-full object-cover ${
+                      hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
+                      hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
+                    }`}
+                  />
+                  {/* Quick Unmute / Audio indicator if audio muted */}
+                  <button
+                    onClick={() => {
+                      if (remoteVideoRef.current) {
+                        remoteVideoRef.current.muted = !remoteVideoRef.current.muted;
+                      }
+                    }}
+                    className="absolute top-4 left-4 z-20 px-2 py-1 bg-black/70 hover:bg-black text-slate-300 text-[10px] rounded-lg border border-slate-700 font-mono flex items-center gap-1 backdrop-blur-sm"
+                  >
+                    <Volume2 className="w-3 h-3 text-sky-400" />
+                    <span>Toggle Audio</span>
+                  </button>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <div className="flex flex-col items-center justify-center text-center p-6 space-y-3 z-10">
                   <Cast className="w-10 h-10 text-sky-400 animate-bounce" />
                   <div>
                     <h4 className="text-sm font-bold text-white">Connecting to Colleague's Live Camera Feed...</h4>
                     <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Waiting for responder on scene to broadcast from Room <code className="text-sky-300 font-mono">{displayRoomId}</code>.
+                      Waiting for responder on scene to broadcast from Room <code className="text-sky-300 font-mono font-bold">{displayRoomId}</code>.
                     </p>
                   </div>
-                  <span className="text-[10px] font-mono bg-sky-950/80 text-sky-300 px-3 py-1 rounded-full border border-sky-600/40 animate-pulse">
-                    WebRTC Peer-to-Peer Link Active
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono bg-sky-950/80 text-sky-300 px-3 py-1 rounded-full border border-sky-600/40 animate-pulse">
+                      Dual-Handshake WebRTC Active
+                    </span>
+                    <button
+                      onClick={() => handleWatchFeed()}
+                      className="text-[10px] font-mono bg-sky-600 hover:bg-sky-500 text-white px-3 py-1 rounded-full font-bold transition-all"
+                    >
+                      Retry Connection
+                    </button>
+                  </div>
                 </div>
               )}
             </>
