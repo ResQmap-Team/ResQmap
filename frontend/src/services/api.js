@@ -21,23 +21,19 @@
  *
  * Override at runtime: apiClient.setNodes(['http://192.168.1.10:8000', ...])
  */
+const DEFAULT_CLOUD_BACKEND = 'https://resq-gu02.onrender.com';
+
 const _defaultNodes = (() => {
   const nodesEnv = import.meta.env.VITE_API_NODES || '';
   if (nodesEnv.trim()) {
     return nodesEnv.split(',').map(u => u.trim()).filter(Boolean);
   }
-  const single = import.meta.env.VITE_API_URL
-    || localStorage.getItem('RESQMAP_BACKEND_URL')
-    || 'http://localhost:8000';
-  if (single === 'http://localhost:8000' && !import.meta.env.VITE_API_URL) {
-    console.warn(
-      '[API] No VITE_API_NODES or VITE_API_URL env var found — ' +
-      'falling back to http://localhost:8000. ' +
-      'Copy frontend/.env.example to frontend/.env and set VITE_API_NODES ' +
-      'to your teammate LAN IPs for multi-machine operation.'
-    );
+  const stored = localStorage.getItem('RESQMAP_BACKEND_URL');
+  if (stored && stored.trim() && stored !== 'http://localhost:8000') {
+    return [stored.trim(), DEFAULT_CLOUD_BACKEND, 'http://localhost:8000'];
   }
-  return [single];
+  const single = import.meta.env.VITE_API_URL || DEFAULT_CLOUD_BACKEND;
+  return [single, 'http://localhost:8000'];
 })();
 
 const HEALTH_CHECK_INTERVAL_MS = 15_000;  // 15 s

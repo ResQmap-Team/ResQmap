@@ -44,7 +44,7 @@ export const ENDPOINT_MODE = Object.freeze({
  * Returns { endpoint_mode, destination_label } — no URL or key exposed.
  * Returns null if the backend is unreachable.
  */
-export async function getForwardingConfig(backendUrl = 'http://localhost:8000') {
+export async function getForwardingConfig(backendUrl = 'https://resq-gu02.onrender.com') {
   try {
     const response = await fetch(`${backendUrl}/api/emergency-reports/config`, {
       method: 'GET',
@@ -82,7 +82,7 @@ export async function getForwardingConfig(backendUrl = 'http://localhost:8000') 
  *   FAILED         → show sanitized_error, no retry
  *   RETRY_REQUIRED → show sanitized_error, offer retry button
  */
-export async function forwardEmergencyReport(incident, backendUrl = 'http://localhost:8000', options = {}) {
+export async function forwardEmergencyReport(incident, backendUrl = 'https://resq-gu02.onrender.com', options = {}) {
   const { operatorNotes = null, isRetry = false } = options;
 
   if (!incident) {
@@ -155,7 +155,7 @@ export async function forwardEmergencyReport(incident, backendUrl = 'http://loca
  * Retry a previous failed forwarding attempt.
  * Identical to forwardEmergencyReport but sets is_retry=true.
  */
-export async function retryEmergencyReport(incident, backendUrl = 'http://localhost:8000', operatorNotes = null) {
+export async function retryEmergencyReport(incident, backendUrl = 'https://resq-gu02.onrender.com', operatorNotes = null) {
   return forwardEmergencyReport(incident, backendUrl, { operatorNotes, isRetry: true });
 }
 
@@ -164,7 +164,7 @@ export async function retryEmergencyReport(incident, backendUrl = 'http://localh
  * Fetch the forwarding attempt history for a specific incident from the backend.
  * Returns an array of EmergencyForwardingAttempt objects, or [] on error.
  */
-export async function getForwardingHistory(incidentId, backendUrl = 'http://localhost:8000') {
+export async function getForwardingHistory(incidentId, backendUrl = 'https://resq-gu02.onrender.com') {
   try {
     const response = await fetch(
       `${backendUrl}/api/emergency-reports/${encodeURIComponent(incidentId)}/history`,
