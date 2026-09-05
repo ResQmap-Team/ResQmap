@@ -1,12 +1,12 @@
 import React from 'react';
 import { DisasterProvider, useDisaster } from './context/DisasterContext';
+import resqEmblem from './assets/resq_emblem.png';
 import Navbar from './components/Navbar';
 import StatsBar from './components/StatsBar';
 import LiveMap from './components/LiveMap';
 import IncidentDrawer from './components/IncidentDrawer';
 import CitizenReportModal from './components/CitizenReportModal';
 import ResponderHub from './components/ResponderHub';
-import JudgeSandbox from './components/JudgeSandbox';
 import AnalyticsView from './components/AnalyticsView';
 import AllReportsView from './components/AllReportsView';
 import SettingsModal from './components/SettingsModal';
@@ -34,7 +34,6 @@ function MainAppContent() {
         {activeView === 'reports' && <AllReportsView />}
         {activeView === 'responder' && <ResponderHub />}
         {activeView === 'volunteers' && <VolunteerHub />}
-        {activeView === 'sandbox' && <JudgeSandbox />}
         {activeView === 'analytics' && <AnalyticsView />}
         {activeView === 'sos' && <SOSQueueView />}
 
@@ -54,7 +53,7 @@ function MainAppContent() {
       <footer className="mt-8 border-t border-[#1f293d] bg-[#0d131f] py-4 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <img src="/resq_emblem.png" alt="RESQ" className="w-5 h-5 rounded object-cover" />
+            <img src={resqEmblem} alt="RESQ" className="w-5 h-5 rounded object-cover" />
             <span>
               <b>RESQ</b> © 2026 — "From citizen evidence to coordinated response."
             </span>

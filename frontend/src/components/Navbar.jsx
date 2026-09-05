@@ -1,10 +1,10 @@
 import React from 'react';
 import { useDisaster } from '../context/DisasterContext';
+import resqEmblem from '../assets/resq_emblem.png';
 import { 
   Radio, 
   MapPin, 
   Video, 
-  FlaskConical, 
   PlusCircle, 
   Settings, 
   ShieldAlert, 
@@ -70,7 +70,7 @@ export default function Navbar() {
         {/* Brand with Attached RESQ Firefighter Emblem */}
         <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => setActiveView('map')}>
           <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-rose-950/40 border border-slate-700 bg-slate-900">
-            <img src="/resq_emblem.png" alt="RESQ SINCE 2026" className="w-full h-full object-cover" />
+            <img src={resqEmblem} alt="RESQ SINCE 2026" className="w-full h-full object-cover" />
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#0a0e17]"></span>
           </div>
           <div>
@@ -209,22 +209,6 @@ export default function Navbar() {
           >
             <Building2 className="w-3.5 h-3.5 text-amber-400" />
             <span>Gov Forward</span>
-          </button>
-
-          {/* 10. Judge Sandbox */}
-          <button
-            onClick={() => setActiveView('sandbox')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-              activeView === 'sandbox'
-                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                : 'text-amber-300 hover:text-amber-100 hover:bg-amber-950/40 border border-amber-500/20'
-            }`}
-          >
-            <FlaskConical className="w-3.5 h-3.5 text-amber-400" />
-            <span>Judge Sandbox</span>
-            <span className="text-[9px] uppercase tracking-wider bg-amber-400 text-black px-1 py-0.2 rounded font-bold">
-              Test
-            </span>
           </button>
         </nav>
 
