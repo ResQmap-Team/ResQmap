@@ -57,17 +57,23 @@ It ingests ground-level citizen disaster photos shot under challenging condition
 
 ### 1. Run the Frontend App
 ```bash
-cd C:\Users\ivibh\.gemini\antigravity\scratch\resqmap\frontend
+cd frontend
+npm install
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 2. Configure Gemini API Key (Optional)
-Click the **⚙️ Settings** icon in the top right navbar to enter your Google Gemini API Key.
-*(If omitted, the app automatically runs in Smart Hybrid Fallback mode with full visual feature explainability).*
+### 2. Run the Backend Server
+```bash
+python -m pip install -r backend/requirements.txt
+python run.py
+```
+Backend API will be live at [http://localhost:8000](http://localhost:8000) (Swagger docs at `/docs`).
 
-### 3. Connecting Teammate's Backend Server
-When your teammate has deployed their backend server, open **⚙️ Settings** and enter their server URL (e.g., `http://localhost:8000`).
+### 3. Configure API Keys & Settings
+Click the **⚙️ Settings** icon in the top right navbar to configure AI API keys or teammate backend endpoints.
+*(If omitted, the app runs in Hybrid Mode with full computer vision explainability).*
+
 
 ---
 

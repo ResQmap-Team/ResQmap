@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -54,6 +54,12 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Deploy to gh-pages Branch
+        if: github.ref == 'refs/heads/main'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: frontend/dist
+          branch: gh-pages
 
       - name: Setup GitHub Pages
         if: github.ref == 'refs/heads/main'
@@ -76,3 +82,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
