@@ -64,11 +64,11 @@ export default function ResilienceModal() {
     }
   };
 
-  /** Format "host:port" from a full URL for compact display. */
+  /** Format "host:port" or "host" from a full URL for compact display. */
   const formatUrl = (url) => {
     try {
       const u = new URL(url);
-      return `${u.hostname}:${u.port || 80}`;
+      return u.port ? `${u.hostname}:${u.port}` : u.hostname;
     } catch {
       return url;
     }

@@ -13,7 +13,7 @@ import { apiClient } from '../services/api';
 
 const DisasterContext = createContext();
 
-const STORAGE_KEY = 'RESQMAP_INCIDENTS_V3';
+const STORAGE_KEY = 'RESQMAP_INCIDENTS_V5';
 const API_KEY_STORAGE = 'RESQMAP_GEMINI_KEY';
 const NODES_STORAGE = 'RESQMAP_API_NODES';
 const EMERGENCY_CONTACTS_STORAGE = 'RESQMAP_EMERGENCY_CONTACTS';
@@ -22,33 +22,61 @@ const VOLUNTEER_PROFILE_STORAGE = 'RESQMAP_VOLUNTEER_PROFILE';
 const VOLUNTEER_TASKS_STORAGE = 'RESQMAP_VOLUNTEER_TASKS';
 const VOLUNTEER_IMPACT_STORAGE = 'RESQMAP_VOLUNTEER_IMPACT';
 
+// India Bounding Box: Lat: 6.5 - 37.5, Lng: 68.0 - 97.5
+function isWithinIndia(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+  return lat >= 6.5 && lat <= 37.5 && lng >= 68.0 && lng <= 97.5;
+}
+
+function sanitizeIncident(inc) {
+  let img = inc.imageUrl;
+  if (!img || img.includes('photo-1599839575945-a9e5af0c3fa5')) {
+    img = 'https://images.unsplash.com/photo-1525874684015-58379d421a52?auto=format&fit=crop&w=800&q=80';
+  }
+  return { ...inc, imageUrl: img };
+}
 
 export function DisasterProvider({ children }) {
   const [incidents, setIncidents] = useState(() => {
     try {
+      // Clean legacy cache keys that contained out-of-India events
+      ['RESQMAP_INCIDENTS', 'RESQMAP_INCIDENTS_V1', 'RESQMAP_INCIDENTS_V2', 'RESQMAP_INCIDENTS_V3', 'RESQMAP_INCIDENTS_V4'].forEach(k => {
+        try { localStorage.removeItem(k); } catch (_) {}
+      });
+
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Strictly filter out any non-India incidents
+          const indiaOnly = parsed
+            .filter(i => isWithinIndia(i.latitude, i.longitude))
+            .map(sanitizeIncident);
+          if (indiaOnly.length >= 5) return indiaOnly;
+        }
       }
     } catch (e) {
       console.warn("Failed to load saved incidents from storage:", e);
     }
-    return SEED_INCIDENTS;
+    return SEED_INCIDENTS.map(sanitizeIncident);
   });
 
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [activeResponderIncident, setActiveResponderIncident] = useState(() => SEED_INCIDENTS[0]);
   const [activeView, setActiveView] = useState('map'); // 'map' | 'reports' | 'responder' | 'volunteers' | 'sandbox' | 'analytics' | 'sos'
   
-  // Real-Time EONET NASA Integration
+  // Real-Time EONET NASA Integration (Strictly India coordinates)
   useEffect(() => {
     let isMounted = true;
     fetchRealTimeIncidents().then(liveData => {
       if (!isMounted || !Array.isArray(liveData) || liveData.length === 0) return;
+      const validIndiaEvents = liveData
+        .filter(i => isWithinIndia(i.latitude, i.longitude))
+        .map(sanitizeIncident);
+      if (validIndiaEvents.length === 0) return;
       setIncidents(prev => {
         const existingIds = new Set(prev.map(i => i.id));
-        const newIncidents = liveData.filter(i => !existingIds.has(i.id));
+        const newIncidents = validIndiaEvents.filter(i => !existingIds.has(i.id));
         return [...newIncidents, ...prev];
       });
     }).catch(() => {});

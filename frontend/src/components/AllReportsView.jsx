@@ -30,23 +30,29 @@ import { HAZARD_CATEGORIES, SEVERITY_CONFIG } from '../data/seedIncidents';
 
 const DEFAULT_FALLBACK_IMAGES = {
   Flood: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80",
-  Fire: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
+  Fire: "https://images.unsplash.com/photo-1525874684015-58379d421a52?auto=format&fit=crop&w=800&q=80",
   Structural: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?auto=format&fit=crop&w=800&q=80",
   Landslide: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
   Powerline: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80",
   Storm: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=800&q=80",
-  Default: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80"
+  Default: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80"
 };
 
 function getIncidentImageUrl(inc) {
-  if (inc && inc.imageUrl && inc.imageUrl.trim().length > 5) return inc.imageUrl;
+  if (inc && inc.imageUrl && inc.imageUrl.trim().length > 5) {
+    // Sanitize any legacy dog photo URLs
+    if (inc.imageUrl.includes('photo-1599839575945-a9e5af0c3fa5')) {
+      return DEFAULT_FALLBACK_IMAGES.Fire;
+    }
+    return inc.imageUrl;
+  }
   const cat = (inc?.hazardCategory || '').toLowerCase();
-  if (cat.includes('flood')) return DEFAULT_FALLBACK_IMAGES.Flood;
-  if (cat.includes('fire') || cat.includes('wildfire')) return DEFAULT_FALLBACK_IMAGES.Fire;
-  if (cat.includes('structural') || cat.includes('building') || cat.includes('earthquake')) return DEFAULT_FALLBACK_IMAGES.Structural;
-  if (cat.includes('landslide')) return DEFAULT_FALLBACK_IMAGES.Landslide;
-  if (cat.includes('powerline') || cat.includes('electrical')) return DEFAULT_FALLBACK_IMAGES.Powerline;
-  if (cat.includes('storm')) return DEFAULT_FALLBACK_IMAGES.Storm;
+  if (cat.includes('flood') || cat.includes('water')) return DEFAULT_FALLBACK_IMAGES.Flood;
+  if (cat.includes('fire') || cat.includes('wildfire') || cat.includes('smoke')) return DEFAULT_FALLBACK_IMAGES.Fire;
+  if (cat.includes('structural') || cat.includes('building') || cat.includes('earthquake') || cat.includes('collapse')) return DEFAULT_FALLBACK_IMAGES.Structural;
+  if (cat.includes('landslide') || cat.includes('mudslide') || cat.includes('slope')) return DEFAULT_FALLBACK_IMAGES.Landslide;
+  if (cat.includes('powerline') || cat.includes('electrical') || cat.includes('wire')) return DEFAULT_FALLBACK_IMAGES.Powerline;
+  if (cat.includes('storm') || cat.includes('cyclone') || cat.includes('rain')) return DEFAULT_FALLBACK_IMAGES.Storm;
   return DEFAULT_FALLBACK_IMAGES.Default;
 }
 

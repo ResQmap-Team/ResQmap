@@ -60,7 +60,7 @@ export async function fetchRealTimeIncidents() {
       }
 
       const categoryImages = {
-        wildfires: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
+        wildfires: "https://images.unsplash.com/photo-1525874684015-58379d421a52?auto=format&fit=crop&w=800&q=80",
         severeStorms: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=800&q=80",
         volcanoes: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=800&q=80",
         seaLakeIce: "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=800&q=80",
@@ -78,8 +78,8 @@ export async function fetchRealTimeIncidents() {
         description: `NASA EONET Alert: ${event.categories[0]?.title || 'Natural Event'}. Tracking live coordinates via Global Sensor Network.`,
         latitude: lat,
         longitude: lng,
-        address: "Global Sensor Network",
-        imageUrl: categoryImages[categoryId] || "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
+        address: "India Regional Sensor Network",
+        imageUrl: categoryImages[categoryId] || "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80",
         status: "NEW",
         timestamp: eventDate,
         createdAt: eventDate,
