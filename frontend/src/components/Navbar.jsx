@@ -125,88 +125,36 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Desktop Primary Navigation (Visible on xl+ screens) */}
-          <nav className="hidden xl:flex items-center bg-[#0d1527]/80 backdrop-blur-md p-1 rounded-xl border border-white/[0.08] gap-1">
-            <button
-              onClick={() => setActiveView('map')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'map'
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
+          {/* Center: High-Tech Command Center Branding & Status Telemetry */}
+          <div className="hidden md:flex items-center gap-3">
+            <div 
+              onClick={() => setIsDrawerOpen(true)}
+              className="cursor-pointer group flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-[#0b1220]/80 border border-white/[0.08] hover:border-slate-600/60 shadow-inner backdrop-blur-md transition-all hover:bg-slate-900/90 active:scale-98"
+              title="Click to Open All Command Center Features & Tools"
             >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Live Map</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView('reports')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'reports'
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>All Reports</span>
-              <span className="px-1.5 py-0.2 bg-black/40 rounded-full text-[10px] font-mono">
-                {stats.total}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveView('sos')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'sos'
-                  ? 'bg-rose-700 text-white shadow-md shadow-rose-700/40 ring-1 ring-rose-500/50'
-                  : 'text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-700/20'
-              }`}
-            >
-              <Siren className="w-3.5 h-3.5" />
-              <span>SOS Queue</span>
-              {stats.activeSOS > 0 && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-mono">
-                  {stats.activeSOS}
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 </span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveView('responder')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'responder'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Video className="w-3.5 h-3.5 text-sky-300 animate-pulse" />
-              <span>Live Feed</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView('volunteers')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'volunteers'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <HandHeart className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Volunteer Hub</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView('analytics')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeView === 'analytics'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5 text-purple-400" />
-              <span>Fleet Analytics</span>
-            </button>
-          </nav>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                  {activeView === 'map' && <><span>LIVE TACTICAL MAP</span> <span className="text-slate-400 font-normal">· India Sector</span></>}
+                  {activeView === 'reports' && <><span>DISASTER DATABASE</span> <span className="text-slate-400 font-normal">· {stats.total} Reports</span></>}
+                  {activeView === 'sos' && <><span>SOS PRIORITY QUEUE</span> <span className="text-rose-400 font-normal">· Triage P0–P3</span></>}
+                  {activeView === 'responder' && <><span>FIRST RESPONDER TELEMETRY</span> <span className="text-sky-400 font-normal">· WebRTC</span></>}
+                  {activeView === 'volunteers' && <><span>VOLUNTEER MESH HUB</span> <span className="text-indigo-400 font-normal">· Task Grid</span></>}
+                  {activeView === 'analytics' && <><span>FLEET ANALYTICS & TRIAGE</span> <span className="text-purple-400 font-normal">· Real-time</span></>}
+                </span>
+              </div>
+              
+              <div className="h-3.5 w-px bg-slate-700 mx-0.5"></div>
+              
+              <span className="text-[10px] text-slate-400 group-hover:text-rose-400 transition-colors flex items-center gap-1 font-mono">
+                <span>Menu</span>
+                <Menu className="w-3 h-3 text-slate-400 group-hover:text-rose-400" />
+              </span>
+            </div>
+          </div>
 
           {/* Right Action & System Controls */}
           <div className="flex items-center gap-2 shrink-0">
