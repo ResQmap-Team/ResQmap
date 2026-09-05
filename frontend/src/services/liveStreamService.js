@@ -2,12 +2,13 @@ import Peer from 'peerjs';
 import { apiClient } from './api';
 
 /**
- * ResQNet Ultra-Reliable Peer-to-Peer Live Video Broadcast Service using WebRTC (PeerJS)
- * Supports cross-network live streaming between 4G/5G mobile phones, laptops, and command centers
- * with dual-handshake signaling (DataConnection request + MediaCall return) and heartbeat keepalive.
+ * ResQNet Ultra-Reliable Peer-to-Peer Live Video Broadcast Service
+ * Dual-Engine Architecture:
+ * 1. High-Performance WebRTC Stream (60 FPS Native Audio/Video)
+ * 2. Instant Live Frame DataChannel Stream (12 FPS Real-Time Fallback for VPNs / Strict Firewalls)
  */
 
-const ICE_SERVERS_CONFIG = {
+const RELIABLE_STUN_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
@@ -15,36 +16,18 @@ const ICE_SERVERS_CONFIG = {
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'stun:stun.services.mozilla.com' },
     { urls: 'stun:stun.cloudflare.com:3478' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelay',
-      credential: 'openrelay'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelay',
-      credential: 'openrelay'
-    }
+    { urls: 'stun:stun.services.mozilla.com' }
   ],
   iceCandidatePoolSize: 10
 };
 
 const PEER_BASE_CONFIG = {
   debug: 1,
-  pingInterval: 5000, // 5s heartbeat keeps 4G/5G cellular NAT bindings alive
-  config: ICE_SERVERS_CONFIG
+  pingInterval: 5000,
+  config: RELIABLE_STUN_SERVERS
 };
 
-/**
- * Creates an active dummy media stream for viewer offer fallback
- */
 function createActiveDummyStream() {
   const canvas = document.createElement('canvas');
   canvas.width = 16;
@@ -101,13 +84,19 @@ class LiveStreamManager {
     this.peer            = null;
     this.localStream     = null;
     this.activeCalls     = [];
+    this.activeDataConns = [];
     this.remoteStream    = null;
     this.isBroadcasting  = false;
     this.isWatching      = false;
     this.broadcastRoomId = null;
     this.dummyStream     = null;
     this.retryTimer      = null;
+    this.framePumpTimer  = null;
     this._activeFeedId   = null;
+    this.snapCanvas      = document.createElement('canvas');
+    this.snapVideo       = document.createElement('video');
+    this.snapVideo.muted = true;
+    this.snapVideo.playsInline = true;
   }
 
   getPeerRoomId(incidentId) {
@@ -136,20 +125,47 @@ class LiveStreamManager {
       this.localStream     = stream;
       this.isBroadcasting  = true;
 
+      // Attach local stream to hidden video element for snapshot extraction
+      this.snapVideo.srcObject = stream;
+      this.snapVideo.play().catch(() => {});
+
+      // Start frame pump (10-12 FPS) for instant data channel fallback
+      this.framePumpTimer = setInterval(() => {
+        if (!this.isBroadcasting || this.activeDataConns.length === 0) return;
+        if (this.snapVideo.videoWidth > 0 && this.snapVideo.videoHeight > 0) {
+          const w = 480;
+          const h = Math.round((this.snapVideo.videoHeight / this.snapVideo.videoWidth) * 480) || 270;
+          this.snapCanvas.width = w;
+          this.snapCanvas.height = h;
+          const ctx = this.snapCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(this.snapVideo, 0, 0, w, h);
+            const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.55);
+            const msg = JSON.stringify({ type: 'LIVE_FRAME', frame: frameJpeg, t: Date.now() });
+            this.activeDataConns.forEach(conn => {
+              if (conn && conn.open) {
+                try { conn.send(msg); } catch (e) {}
+              }
+            });
+          }
+        }
+      }, 90);
+
       this.peer = new Peer(roomId, PEER_BASE_CONFIG);
 
-      // Handler for direct viewer media calls (Viewer -> Broadcaster)
       const handleIncomingCall = (call) => {
-        console.log(`[Broadcaster] Incoming direct media call from ${call.peer}`);
+        console.log(`[Broadcaster] Incoming media call from ${call.peer}`);
         call.answer(this.localStream);
         this._trackActiveCall(call, onViewerJoined);
       };
 
-      // Handler for viewer data connections (Dual-handshake: Viewer requests stream -> Broadcaster calls Viewer)
       const handleDataConnection = (conn) => {
         console.log(`[Broadcaster] Incoming data connection from viewer: ${conn.peer}`);
-        
-        const initiateMediaCallToViewer = () => {
+        if (!this.activeDataConns.includes(conn)) {
+          this.activeDataConns.push(conn);
+        }
+
+        const callViewer = () => {
           if (!this.localStream || !this.peer) return;
           console.log(`[Broadcaster] Calling viewer ${conn.peer} with local stream...`);
           try {
@@ -164,13 +180,22 @@ class LiveStreamManager {
 
         conn.on('open', () => {
           console.log(`[Broadcaster] Data channel open with ${conn.peer}`);
-          initiateMediaCallToViewer();
+          callViewer();
         });
 
         conn.on('data', (data) => {
-          if (data && data.type === 'REQUEST_STREAM') {
-            initiateMediaCallToViewer();
+          if (typeof data === 'string') {
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'REQUEST_STREAM') callViewer();
+            } catch (e) {}
+          } else if (data && data.type === 'REQUEST_STREAM') {
+            callViewer();
           }
+        });
+
+        conn.on('close', () => {
+          this.activeDataConns = this.activeDataConns.filter(c => c !== conn);
         });
       };
 
@@ -192,9 +217,7 @@ class LiveStreamManager {
           if (this._activeFeedId) {
             await apiClient.updateFeed(this._activeFeedId, { status: 'LIVE' }).catch(() => {});
           }
-          console.info(`[LiveStream] Feed registered → feedId=${this._activeFeedId}`);
         } catch (err) {
-          console.warn('[LiveStream] Feed registration failed (non-fatal):', err);
           this._activeFeedId = null;
         }
 
@@ -207,7 +230,6 @@ class LiveStreamManager {
       this.peer.on('error', (err) => {
         console.warn('[LiveStream] PeerJS broadcaster error:', err);
         if (err.type === 'unavailable-id') {
-          console.info('[LiveStream] Room ID already in use, generating randomized suffix.');
           const randomId = `${roomId}-${Math.floor(100 + Math.random() * 900)}`;
           this.peer = new Peer(randomId, PEER_BASE_CONFIG);
           this.peer.on('open', async (newId) => {
@@ -255,9 +277,9 @@ class LiveStreamManager {
   }
 
   /**
-   * Join and watch an arbitrary room ID directly (Dual-Handshake approach)
+   * Join and watch an arbitrary room ID directly
    */
-  joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange = null) {
+  joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange = null, onFrameReceived = null) {
     return new Promise((resolve, reject) => {
       this.disconnectWatcher();
 
@@ -271,7 +293,7 @@ class LiveStreamManager {
       const handleIncomingStream = (incomingStream) => {
         if (!incomingStream || streamReceived) return;
         streamReceived = true;
-        console.log('[LiveStream] Successfully connected to live stream!', incomingStream);
+        console.log('[LiveStream] Received full WebRTC video stream!', incomingStream);
         this.remoteStream = incomingStream;
         if (onStreamReceived) onStreamReceived(incomingStream);
         if (onConnectionChange) onConnectionChange('CONNECTED');
@@ -281,10 +303,10 @@ class LiveStreamManager {
         }
       };
 
-      // Listener 1: Broadcaster calls viewer back with real camera stream
+      // Listener for Broadcaster calling viewer back
       this.peer.on('call', (incomingCall) => {
-        console.log('[Viewer] Broadcaster called us with camera stream! Answering...');
-        incomingCall.answer(); // Pure receiver - answers cleanly
+        console.log('[Viewer] Broadcaster called us with media stream! Answering...');
+        incomingCall.answer();
         incomingCall.on('stream', handleIncomingStream);
         if (incomingCall.peerConnection) {
           incomingCall.peerConnection.ontrack = (evt) => {
@@ -296,21 +318,31 @@ class LiveStreamManager {
       });
 
       this.peer.on('open', (myId) => {
-        console.log(`[Viewer] Active (${myId}), connecting to broadcaster room (${cleanRoomId})...`);
+        console.log(`[Viewer] Active (${myId}), connecting to room (${cleanRoomId})...`);
 
         const attemptConnect = () => {
-          if (streamReceived || !this.isWatching || !this.peer) return;
+          if (!this.isWatching || !this.peer) return;
 
           try {
-            // Path A: Open DataConnection to ask broadcaster to call us
-            console.log(`[Viewer] Signaling stream request to ${cleanRoomId}...`);
+            // Channel 1: Data Connection for frame sync & stream request
             const conn = this.peer.connect(cleanRoomId, { reliable: true });
             conn.on('open', () => {
-              console.log('[Viewer] Data channel opened with broadcaster, requesting feed...');
-              conn.send({ type: 'REQUEST_STREAM', viewerId: myId });
+              console.log('[Viewer] Data channel open with broadcaster!');
+              if (onConnectionChange) onConnectionChange('CONNECTED');
+              conn.send(JSON.stringify({ type: 'REQUEST_STREAM', viewerId: myId }));
             });
 
-            // Path B: Simultaneous direct media call with active dummy stream
+            conn.on('data', (rawMsg) => {
+              try {
+                const msg = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+                if (msg.type === 'LIVE_FRAME' && msg.frame) {
+                  if (onFrameReceived) onFrameReceived(msg.frame);
+                  if (onConnectionChange) onConnectionChange('CONNECTED');
+                }
+              } catch (e) {}
+            });
+
+            // Channel 2: Simultaneous direct media call
             if (!this.dummyStream) {
               this.dummyStream = createActiveDummyStream();
             }
@@ -330,46 +362,43 @@ class LiveStreamManager {
           }
         };
 
-        // Initial attempt
         attemptConnect();
 
-        // Retry every 3.5 seconds if stream is not yet established
         this.retryTimer = setInterval(() => {
           if (!streamReceived && this.isWatching) {
-            console.log('[Viewer] Retrying connection to broadcaster...');
+            console.log('[Viewer] Retrying connection...');
             attemptConnect();
           } else {
             clearInterval(this.retryTimer);
             this.retryTimer = null;
           }
-        }, 3500);
+        }, 3000);
 
         resolve(this.peer);
       });
 
       this.peer.on('error', (err) => {
         console.warn('[LiveStream] Viewer peer error:', err);
-        if (err.type === 'peer-unavailable') {
-          console.warn('[LiveStream] Broadcaster peer is not reachable yet.');
-        }
       });
     });
   }
 
-  /**
-   * Join and watch a colleague's live broadcast by Incident ID
-   */
-  joinBroadcast(incidentId, onStreamReceived, onConnectionChange = null) {
+  joinBroadcast(incidentId, onStreamReceived, onConnectionChange = null, onFrameReceived = null) {
     const targetRoomId = this.getPeerRoomId(incidentId);
-    return this.joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange);
+    return this.joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange, onFrameReceived);
   }
 
-  /**
-   * Stop the broadcast and mark the backend feed record as ENDED.
-   */
   stopBroadcast() {
     this.isBroadcasting = false;
     this.broadcastRoomId = null;
+    if (this.framePumpTimer) {
+      clearInterval(this.framePumpTimer);
+      this.framePumpTimer = null;
+    }
+    this.activeDataConns.forEach(conn => {
+      try { conn.close(); } catch (e) {}
+    });
+    this.activeDataConns = [];
     this.activeCalls.forEach(call => {
       try { call.close(); } catch (e) {}
     });
@@ -382,11 +411,7 @@ class LiveStreamManager {
     if (this._activeFeedId) {
       const feedId = this._activeFeedId;
       this._activeFeedId = null;
-      apiClient.updateFeed(feedId, { status: 'ENDED' }).then(() => {
-        console.info(`[LiveStream] Feed ${feedId} marked ENDED.`);
-      }).catch((err) => {
-        console.warn('[LiveStream] Failed to mark feed ENDED:', err);
-      });
+      apiClient.updateFeed(feedId, { status: 'ENDED' }).catch(() => {});
     }
   }
 

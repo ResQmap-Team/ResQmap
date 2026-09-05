@@ -64,6 +64,7 @@ export default function ResponderHub() {
   // Real camera & WebRTC states
   const [cameraStream, setCameraStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [remoteFrame, setRemoteFrame] = useState(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [isWatchingLive, setIsWatchingLive] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
@@ -253,6 +254,7 @@ export default function ResponderHub() {
       setConnectionStatus('CONNECTING_PEER');
       setStreamMode('watch');
       setIsWatchingLive(true);
+      setRemoteFrame(null);
       if (feedToWatch) setSelectedFeed(feedToWatch);
 
       await liveStreamService.joinBroadcastByRoomId(
@@ -264,6 +266,10 @@ export default function ResponderHub() {
         (status) => {
           if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
           else if (status === 'ERROR') setConnectionStatus('FAILED');
+        },
+        (frame) => {
+          setRemoteFrame(frame);
+          setConnectionStatus('CONNECTED_WATCHING');
         }
       );
     } catch (err) {
@@ -281,6 +287,7 @@ export default function ResponderHub() {
       setStreamMode('watch');
       setIsWatchingLive(true);
       setSelectedFeed(null);
+      setRemoteFrame(null);
 
       await liveStreamService.joinBroadcastByRoomId(
         targetRoom,
@@ -291,6 +298,10 @@ export default function ResponderHub() {
         (status) => {
           if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
           else if (status === 'ERROR') setConnectionStatus('FAILED');
+        },
+        (frame) => {
+          setRemoteFrame(frame);
+          setConnectionStatus('CONNECTED_WATCHING');
         }
       );
     } catch (err) {
@@ -306,6 +317,7 @@ export default function ResponderHub() {
   const handleDisconnectWatcher = () => {
     liveStreamService.disconnectWatcher();
     setRemoteStream(null);
+    setRemoteFrame(null);
     setIsWatchingLive(false);
     setSelectedFeed(null);
     setStreamMode('idle');
@@ -451,6 +463,21 @@ export default function ResponderHub() {
                     <Volume2 className="w-3 h-3 text-sky-400" />
                     <span>Toggle Audio</span>
                   </button>
+                </div>
+              ) : remoteFrame ? (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                  <img
+                    src={remoteFrame}
+                    alt="Live Responder Camera"
+                    className={`w-full h-full object-cover ${
+                      hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
+                      hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
+                    }`}
+                  />
+                  <div className="absolute top-4 left-4 z-20 px-2.5 py-1 bg-emerald-950/90 text-emerald-300 text-[10px] rounded-lg border border-emerald-600/50 font-mono font-bold flex items-center gap-1.5 backdrop-blur-sm shadow-lg animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>LIVE STREAM (DATA LINK)</span>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center text-center p-6 space-y-3 z-10">
