@@ -382,6 +382,21 @@ class ResQMapAPIClient {
     };
   }
 
+  /**
+   * Send a JSON payload over the active WebSocket.
+   */
+  sendWS(msg) {
+    if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+      try {
+        this._ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
   // ─── Incident API ─────────────────────────────────────────────────────────
 
   async getIncidents(limit = 100) {

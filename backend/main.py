@@ -1005,9 +1005,11 @@ async def websocket_endpoint(ws: WebSocket):
             data = await ws.receive_text()
             try:
                 msg = json.loads(data)
-                # Handle ping/keepalive
-                if msg.get("type") == "PING":
+                msg_type = msg.get("type")
+                if msg_type == "PING":
                     await manager.send_to(ws, "PONG", {"timestamp": _now_str()})
+                elif msg_type in ("LIVE_FEED_FRAME", "WEBRTC_OFFER", "WEBRTC_ANSWER", "WEBRTC_ICE_CANDIDATE", "STREAM_REQUEST"):
+                    await manager.broadcast(msg_type, msg)
             except Exception:
                 pass
     except WebSocketDisconnect:
