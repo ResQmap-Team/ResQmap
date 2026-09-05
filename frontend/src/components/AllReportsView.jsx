@@ -28,6 +28,35 @@ import {
 } from 'lucide-react';
 import { HAZARD_CATEGORIES, SEVERITY_CONFIG } from '../data/seedIncidents';
 
+const DEFAULT_FALLBACK_IMAGES = {
+  Flood: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80",
+  Fire: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
+  Structural: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?auto=format&fit=crop&w=800&q=80",
+  Landslide: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+  Powerline: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80",
+  Storm: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=800&q=80",
+  Default: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80"
+};
+
+function getIncidentImageUrl(inc) {
+  if (inc && inc.imageUrl && inc.imageUrl.trim().length > 5) return inc.imageUrl;
+  const cat = (inc?.hazardCategory || '').toLowerCase();
+  if (cat.includes('flood')) return DEFAULT_FALLBACK_IMAGES.Flood;
+  if (cat.includes('fire') || cat.includes('wildfire')) return DEFAULT_FALLBACK_IMAGES.Fire;
+  if (cat.includes('structural') || cat.includes('building') || cat.includes('earthquake')) return DEFAULT_FALLBACK_IMAGES.Structural;
+  if (cat.includes('landslide')) return DEFAULT_FALLBACK_IMAGES.Landslide;
+  if (cat.includes('powerline') || cat.includes('electrical')) return DEFAULT_FALLBACK_IMAGES.Powerline;
+  if (cat.includes('storm')) return DEFAULT_FALLBACK_IMAGES.Storm;
+  return DEFAULT_FALLBACK_IMAGES.Default;
+}
+
+function formatSafeTime(dateStr) {
+  if (!dateStr) return 'Recently';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Recently';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function AllReportsView() {
   const { 
     incidents, 
@@ -240,12 +269,16 @@ export default function AllReportsView() {
               >
                 <div>
                   {/* Photo Banner */}
-                  <div className="relative h-44 w-full bg-black overflow-hidden">
+                  <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
                     <img
-                      src={inc.imageUrl}
+                      src={getIncidentImageUrl(inc)}
                       alt={inc.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = DEFAULT_FALLBACK_IMAGES.Default;
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
 
@@ -263,7 +296,7 @@ export default function AllReportsView() {
                         {inc.id}
                       </span>
                       <span>
-                        {new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatSafeTime(inc.createdAt || inc.timestamp)}
                       </span>
                     </div>
                   </div>

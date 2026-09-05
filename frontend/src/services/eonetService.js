@@ -59,27 +59,48 @@ export async function fetchRealTimeIncidents() {
         severity = "HIGH";
       }
 
+      const categoryImages = {
+        wildfires: "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
+        severeStorms: "https://images.unsplash.com/photo-1527482797697-8795b05a13fe?auto=format&fit=crop&w=800&q=80",
+        volcanoes: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=800&q=80",
+        seaLakeIce: "https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=800&q=80",
+        earthquakes: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?auto=format&fit=crop&w=800&q=80",
+        floods: "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80",
+        landslides: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80"
+      };
+
+      const eventDate = latestGeo.date ? new Date(latestGeo.date).toISOString() : new Date().toISOString();
+
       return {
         id: event.id,
         title: event.title,
         hazardCategory: category,
-        description: `NASA EONET Alert: ${event.categories[0]?.title}. Tracking live coordinates.`,
+        description: `NASA EONET Alert: ${event.categories[0]?.title || 'Natural Event'}. Tracking live coordinates via Global Sensor Network.`,
         latitude: lat,
         longitude: lng,
         address: "Global Sensor Network",
+        imageUrl: categoryImages[categoryId] || "https://images.unsplash.com/photo-1599839575945-a9e5af0c3fa5?auto=format&fit=crop&w=800&q=80",
         status: "NEW",
-        timestamp: latestGeo.date,
+        timestamp: eventDate,
+        createdAt: eventDate,
         priority: priority,
         severity: severity,
         authenticityScore: 100, // It's from NASA
         isRealDisaster: true,
-        source: "NASA_EONET",
+        source: "NASA_EONET_INDIA",
         needsMedical: false,
         needsBoat: categoryId === "floods",
         hasElderlyOrInfants: false,
         trappedCount: 0
       };
-    }).filter(inc => inc.latitude && inc.longitude); // Only return ones with valid coordinates
+    }).filter(inc => (
+      inc.latitude && 
+      inc.longitude && 
+      inc.latitude >= 6.5 && 
+      inc.latitude <= 37.5 && 
+      inc.longitude >= 68.0 && 
+      inc.longitude <= 97.5
+    )); // Strictly India Geographic Coordinates
   } catch (error) {
     console.error("Failed to fetch real-time disaster data:", error);
     return [];

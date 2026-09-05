@@ -28,6 +28,7 @@ import {
   Activity,
   Award,
   ExternalLink,
+  Navigation,
   Server
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -158,6 +159,32 @@ export default function IncidentDrawer() {
               {new Date(selectedIncident.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
+        </div>
+
+        {/* Real-Time GPS Geolocation Action Bar */}
+        <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-mono text-[11px] font-bold text-white block">
+                {selectedIncident.latitude.toFixed(6)}° N, {selectedIncident.longitude.toFixed(6)}° E
+              </span>
+              <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Verified India Geo-Coordinates
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${selectedIncident.latitude},${selectedIncident.longitude}`, '_blank')}
+            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+            title="Open in Google Maps GPS Navigation"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span>Get Directions</span>
+          </button>
         </div>
 
         {/* Spatial + Time Corroboration Banner (Slide 06: "Five reports. One incident.") */}
