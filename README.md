@@ -1,4 +1,4 @@
-# 🚨 ResQMap AI — Citizen-Reported Disaster Damage Mapping & First Responder Feed
+  # 🚨 ResQMap AI — Citizen-Reported Disaster Damage Mapping & First Responder Feed
 
 **ResQMap AI** is an intelligent, real-time disaster damage mapping and first responder coordination system built for emergency disaster triage and hackathon evaluation.
 
@@ -43,13 +43,6 @@ It ingests ground-level citizen disaster photos shot under challenging condition
   - Night Vision (Green Phosphor) and Thermal Heatmap visual modes
   - Audio Radio Roger Beep communication simulator
   - Mission lifecycle state switcher: `DISPATCHED` ➔ `EN_ROUTE` ➔ `ON_SCENE` ➔ `RESOLVED` (with celebratory resolution confetti!).
-
-### 5. ⚖️ Hackathon Judge Evaluation Sandbox
-- Designed specifically for the judging criterion: *"At least five images chosen live by the judges — not the team’s own demonstration images — classified on the spot, with the team explaining which visual features drove each call."*
-- Upload or paste (`Ctrl+V`) any image chosen by judges live on stage.
-- 5 pre-configured instant live test benchmarks.
-- Side-by-side Visual Feature Reasoning, Category Confidence, and Fraud/False Alarm score.
-- "Plot to Live Response Map" button to prove full end-to-end operational integration.
 
 ---
 
