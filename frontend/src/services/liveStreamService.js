@@ -2,12 +2,7 @@ import { apiClient } from './api';
 
 /**
  * ResQMap Multi-Redundant Real-Time Video Broadcast Engine
- * Works across ALL network conditions (Mobile 5G, Opera VPN, CGNAT, Wi-Fi).
- *
- * Pipelines:
- * 1. Backend WebSocket Live Stream Relay (Ultra-fast 15 FPS frame stream across any network)
- * 2. Native WebRTC P2P Stream with WebSocket Signaling (Full 60 FPS HD Video + Audio)
- * 3. Public WSS Broker Fallback (Zero-dependency backup if backend is sleeping)
+ * Guaranteed live video streaming across mobile 5G, Opera VPN, CGNAT, and Wi-Fi.
  */
 
 const STUN_CONFIG = {
@@ -30,18 +25,20 @@ class LiveStreamManager {
     this.targetRoomId    = null;
     this._activeFeedId   = null;
 
-    // Video snapshot extraction
+    // Snapshot extraction video attached to DOM
     this.snapCanvas      = document.createElement('canvas');
-    this.snapVideo       = document.createElement('video');
-    this.snapVideo.muted = true;
-    this.snapVideo.playsInline = true;
+    this.snapVideo       = null;
 
     this.frameInterval   = null;
-    this.peerConnections = new Map(); // viewerId -> RTCPeerConnection
+    this.peerConnections = new Map();
     this.viewerPC        = null;
     this.myViewerId      = null;
-
     this._unsubBackend   = [];
+  }
+
+  normalizeId(str) {
+    if (!str) return '';
+    return String(str).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
   }
 
   getPeerRoomId(incidentId) {
@@ -62,7 +59,7 @@ class LiveStreamManager {
    * Start broadcasting local camera stream to the internet.
    */
   startBroadcast(incidentId, stream, onViewerJoined = null, meta = {}) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.stopBroadcast();
 
       const roomId = this.getPeerRoomId(incidentId);
@@ -70,43 +67,87 @@ class LiveStreamManager {
       this.localStream     = stream;
       this.isBroadcasting  = true;
 
-      // Attach stream to hidden video for snapshot extraction
+      // ── DOM-Attached Video for Guaranteed Frame Decoding ────────────
+      this.snapVideo = document.createElement('video');
+      this.snapVideo.muted = true;
+      this.snapVideo.autoplay = true;
+      this.snapVideo.playsInline = true;
+      this.snapVideo.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:320px;height:240px;opacity:0.01;pointer-events:none;z-index:-1;';
+      document.body.appendChild(this.snapVideo);
       this.snapVideo.srcObject = stream;
       this.snapVideo.play().catch(() => {});
 
-      // ── Pipeline 1: Live Frame Pump via Backend WebSocket (14-16 FPS) ──
-      this.frameInterval = setInterval(() => {
+      const track = stream.getVideoTracks()[0];
+      let imageCap = null;
+      try {
+        if (window.ImageCapture && track) {
+          imageCap = new ImageCapture(track);
+        }
+      } catch (e) {}
+
+      // ── Pipeline 1: Live Frame Pump via WebSocket (15 FPS) ──────────
+      this.frameInterval = setInterval(async () => {
         if (!this.isBroadcasting) return;
-        if (this.snapVideo.videoWidth > 0 && this.snapVideo.videoHeight > 0) {
-          const w = 480;
-          const h = Math.round((this.snapVideo.videoHeight / this.snapVideo.videoWidth) * 480) || 270;
-          this.snapCanvas.width = w;
-          this.snapCanvas.height = h;
-          const ctx = this.snapCanvas.getContext('2d');
-          if (ctx) {
+        try {
+          let sent = false;
+
+          // Strategy A: ImageCapture API
+          if (imageCap && track && track.readyState === 'live') {
+            try {
+              const bitmap = await imageCap.grabFrame();
+              if (bitmap && bitmap.width > 0) {
+                const w = 440;
+                const h = Math.round((bitmap.height / bitmap.width) * 440) || 250;
+                this.snapCanvas.width = w;
+                this.snapCanvas.height = h;
+                const ctx = this.snapCanvas.getContext('2d');
+                ctx.drawImage(bitmap, 0, 0, w, h);
+                const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.52);
+                apiClient.sendWS({
+                  type: 'LIVE_FEED_FRAME',
+                  roomId,
+                  normRoom: this.normalizeId(roomId),
+                  frame: frameJpeg,
+                  t: Date.now()
+                });
+                sent = true;
+              }
+            } catch (e) {}
+          }
+
+          // Strategy B: DOM Video Element
+          if (!sent && this.snapVideo && this.snapVideo.videoWidth > 0) {
+            const w = 440;
+            const h = Math.round((this.snapVideo.videoHeight / this.snapVideo.videoWidth) * 440) || 250;
+            this.snapCanvas.width = w;
+            this.snapCanvas.height = h;
+            const ctx = this.snapCanvas.getContext('2d');
             ctx.drawImage(this.snapVideo, 0, 0, w, h);
             const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.52);
             apiClient.sendWS({
               type: 'LIVE_FEED_FRAME',
               roomId,
+              normRoom: this.normalizeId(roomId),
               frame: frameJpeg,
               t: Date.now()
             });
           }
-        }
+        } catch (err) {}
       }, 70);
 
-      // ── Pipeline 2: WebRTC Signaling via Backend WebSocket ───────────
+      // ── Pipeline 2: WebRTC Signaling via WebSocket ──────────────────
       const unsubStreamReq = apiClient.on('STREAM_REQUEST', async (msg) => {
-        if (msg.roomId === roomId && msg.viewerId) {
-          console.log(`[Broadcaster] Viewer ${msg.viewerId} requested WebRTC stream, sending Offer...`);
+        const msgNorm = this.normalizeId(msg.roomId);
+        const hostNorm = this.normalizeId(roomId);
+        if ((msgNorm === hostNorm || msgNorm.includes(hostNorm) || hostNorm.includes(msgNorm)) && msg.viewerId) {
+          console.log(`[Broadcaster] Viewer ${msg.viewerId} requested WebRTC stream, initiating offer...`);
           await this._sendWebRTCOffer(roomId, msg.viewerId, onViewerJoined);
         }
       });
       this._unsubBackend.push(unsubStreamReq);
 
       const unsubAnswer = apiClient.on('WEBRTC_ANSWER', async (msg) => {
-        if (msg.roomId === roomId && msg.viewerId && this.peerConnections.has(msg.viewerId)) {
+        if (msg.viewerId && this.peerConnections.has(msg.viewerId)) {
           const pc = this.peerConnections.get(msg.viewerId);
           if (pc && msg.sdp) {
             await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)).catch(() => {});
@@ -117,7 +158,7 @@ class LiveStreamManager {
       this._unsubBackend.push(unsubAnswer);
 
       const unsubCandidate = apiClient.on('WEBRTC_ICE_CANDIDATE', async (msg) => {
-        if (msg.roomId === roomId && msg.viewerId && this.peerConnections.has(msg.viewerId)) {
+        if (msg.viewerId && this.peerConnections.has(msg.viewerId)) {
           const pc = this.peerConnections.get(msg.viewerId);
           if (pc && msg.candidate) {
             await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
@@ -205,15 +246,18 @@ class LiveStreamManager {
       this.disconnectWatcher();
 
       const cleanRoomId = targetRoomId.trim();
+      const normTarget = this.normalizeId(cleanRoomId);
       this.isWatching = true;
       this.targetRoomId = cleanRoomId;
       this.myViewerId = `viewer_${Math.floor(100000 + Math.random() * 900000)}`;
 
-      console.log(`[Viewer] Watching room: ${cleanRoomId} as ${this.myViewerId}`);
+      console.log(`[Viewer] Watching room: ${cleanRoomId} (${normTarget}) as ${this.myViewerId}`);
 
       // ── Pipeline 1: Listen for Live Frames via Backend WebSocket ───
       const unsubFrame = apiClient.on('LIVE_FEED_FRAME', (msg) => {
-        if (msg.roomId === cleanRoomId && msg.frame) {
+        if (!msg || !msg.frame) return;
+        const msgNorm = this.normalizeId(msg.roomId || msg.normRoom);
+        if (msgNorm === normTarget || msgNorm.includes(normTarget) || normTarget.includes(msgNorm) || normTarget === '') {
           if (onFrameReceived) onFrameReceived(msg.frame);
           if (onConnectionChange) onConnectionChange('CONNECTED');
         }
@@ -222,7 +266,7 @@ class LiveStreamManager {
 
       // ── Pipeline 2: WebRTC Offer / Answer Listener ─────────────────
       const unsubOffer = apiClient.on('WEBRTC_OFFER', async (msg) => {
-        if (msg.roomId === cleanRoomId && msg.targetViewerId === this.myViewerId && msg.sdp) {
+        if (msg.targetViewerId === this.myViewerId && msg.sdp) {
           console.log('[Viewer] Received WebRTC Offer from broadcaster! Answering...');
           await this._answerWebRTCOffer(cleanRoomId, msg.sdp, onStreamReceived, onConnectionChange);
         }
@@ -230,7 +274,7 @@ class LiveStreamManager {
       this._unsubBackend.push(unsubOffer);
 
       const unsubCandidate = apiClient.on('WEBRTC_ICE_CANDIDATE', async (msg) => {
-        if (msg.roomId === cleanRoomId && msg.targetViewerId === this.myViewerId && msg.candidate) {
+        if (msg.targetViewerId === this.myViewerId && msg.candidate) {
           if (this.viewerPC) {
             await this.viewerPC.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
           }
@@ -249,8 +293,7 @@ class LiveStreamManager {
       };
 
       requestStream();
-      // Retry stream request every 3 seconds if not yet connected
-      this.reqInterval = setInterval(requestStream, 3000);
+      this.reqInterval = setInterval(requestStream, 2500);
 
       if (onConnectionChange) onConnectionChange('CONNECTED');
       resolve(true);
@@ -312,6 +355,11 @@ class LiveStreamManager {
     if (this.frameInterval) {
       clearInterval(this.frameInterval);
       this.frameInterval = null;
+    }
+
+    if (this.snapVideo && this.snapVideo.parentNode) {
+      this.snapVideo.parentNode.removeChild(this.snapVideo);
+      this.snapVideo = null;
     }
 
     this._unsubBackend.forEach(unsub => {
