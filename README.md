@@ -61,7 +61,7 @@ Open https://resqmap-team.github.io/ResQmap/ in your browser.
 python -m pip install -r backend/requirements.txt
 python run.py
 ```
-Backend API will be live at [http://localhost:8000](http://localhost:8000) (Swagger docs at `/docs`).
+Backend API will be live at https://resqmap-team.github.io/ResQmap/ (Swagger docs at `/docs`).
 
 ### 3. Configure API Keys & Settings
 Click the **⚙️ Settings** icon in the top right navbar to configure AI API keys or teammate backend endpoints.
