@@ -199,7 +199,11 @@ export default function ResponderHub() {
     try {
       setConnectionStatus('CONNECTING');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { 
+          facingMode: { ideal: 'environment' }, 
+          width: { ideal: 640, max: 1280 }, 
+          height: { ideal: 480, max: 720 } 
+        },
         audio: true
       });
 
@@ -207,15 +211,24 @@ export default function ResponderHub() {
       setIsBroadcasting(true);
       setCameraStream(stream);
 
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
+      }
+
       const meta = {
         responderId: responderId || null,
         latitude:    gpsPosition?.latitude  ?? null,
         longitude:   gpsPosition?.longitude ?? null,
       };
 
-      const result = await liveStreamService.startBroadcast(incident.id, stream, (count) => {
-        setViewerCount(count);
-      }, meta);
+      const result = await liveStreamService.startBroadcast(
+        incident.id, 
+        stream, 
+        (count) => { setViewerCount(count); }, 
+        meta,
+        localVideoRef.current
+      );
 
       setActiveFeedId(result?.feedId ?? null);
       setActiveBroadcastRoomId(result?.roomId ?? defaultRoomId);
@@ -248,14 +261,15 @@ export default function ResponderHub() {
 
   // Watch a colleague's live stream by Feed or direct Room ID
   const handleWatchFeed = async (feedToWatch = null) => {
-    const targetFeed = feedToWatch || selectedFeed;
+    const targetFeed = feedToWatch || selectedFeed || (activeFeeds.length > 0 ? activeFeeds[0] : null);
     const targetRoomId = targetFeed?.peer_room_id || defaultRoomId;
+    const targetFeedId = targetFeed?.id || null;
     try {
       setConnectionStatus('CONNECTING_PEER');
       setStreamMode('watch');
       setIsWatchingLive(true);
       setRemoteFrame(null);
-      if (feedToWatch) setSelectedFeed(feedToWatch);
+      if (targetFeed) setSelectedFeed(targetFeed);
 
       await liveStreamService.joinBroadcastByRoomId(
         targetRoomId,
@@ -270,7 +284,8 @@ export default function ResponderHub() {
         (frame) => {
           setRemoteFrame(frame);
           setConnectionStatus('CONNECTED_WATCHING');
-        }
+        },
+        targetFeedId
       );
     } catch (err) {
       console.warn('Could not connect to feed:', err);
@@ -310,8 +325,11 @@ export default function ResponderHub() {
     }
   };
 
-  // Legacy "Watch Colleague Feed" button (joins incident-derived room)
-  const handleWatchColleagueStream = () => handleWatchFeed(null);
+  // Legacy "Watch Colleague Feed" button (joins active or incident-derived room)
+  const handleWatchColleagueStream = () => {
+    const feed = activeFeeds.length > 0 ? activeFeeds[0] : null;
+    handleWatchFeed(feed);
+  };
 
   // Disconnect watching
   const handleDisconnectWatcher = () => {

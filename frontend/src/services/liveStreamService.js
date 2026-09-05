@@ -58,7 +58,7 @@ class LiveStreamManager {
   /**
    * Start broadcasting local camera stream to the internet.
    */
-  startBroadcast(incidentId, stream, onViewerJoined = null, meta = {}) {
+  startBroadcast(incidentId, stream, onViewerJoined = null, meta = {}, videoSourceElement = null) {
     return new Promise((resolve) => {
       this.stopBroadcast();
 
@@ -67,79 +67,54 @@ class LiveStreamManager {
       this.localStream     = stream;
       this.isBroadcasting  = true;
 
-      // ── DOM-Attached Video for Guaranteed Frame Decoding ────────────
+      // Fallback DOM-attached video element
       this.snapVideo = document.createElement('video');
       this.snapVideo.muted = true;
       this.snapVideo.autoplay = true;
       this.snapVideo.playsInline = true;
-      this.snapVideo.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:320px;height:240px;opacity:0.01;pointer-events:none;z-index:-1;';
+      this.snapVideo.setAttribute('playsinline', '');
+      this.snapVideo.setAttribute('webkit-playsinline', '');
+      this.snapVideo.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-100;';
       document.body.appendChild(this.snapVideo);
       this.snapVideo.srcObject = stream;
       this.snapVideo.play().catch(() => {});
 
-      const track = stream.getVideoTracks()[0];
-      let imageCap = null;
-      try {
-        if (window.ImageCapture && track) {
-          imageCap = new ImageCapture(track);
-        }
-      } catch (e) {}
-
-      // ── Pipeline 1: Live Frame Pump via WebSocket (15 FPS) ──────────
-      this.frameInterval = setInterval(async () => {
+      // ── Pipeline 1: Live Frame Pump via WebSocket (10 FPS, ~6KB/frame) ──────────
+      this.frameInterval = setInterval(() => {
         if (!this.isBroadcasting) return;
         try {
-          let sent = false;
+          const v = (videoSourceElement && videoSourceElement.videoWidth > 0)
+            ? videoSourceElement
+            : (this.snapVideo && this.snapVideo.videoWidth > 0 ? this.snapVideo : null);
 
-          // Strategy A: ImageCapture API
-          if (imageCap && track && track.readyState === 'live') {
-            try {
-              const bitmap = await imageCap.grabFrame();
-              if (bitmap && bitmap.width > 0) {
-                const w = 440;
-                const h = Math.round((bitmap.height / bitmap.width) * 440) || 250;
-                this.snapCanvas.width = w;
-                this.snapCanvas.height = h;
-                const ctx = this.snapCanvas.getContext('2d');
-                ctx.drawImage(bitmap, 0, 0, w, h);
-                const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.52);
-                apiClient.sendWS({
-                  type: 'LIVE_FEED_FRAME',
-                  roomId,
-                  normRoom: this.normalizeId(roomId),
-                  frame: frameJpeg,
-                  t: Date.now()
-                });
-                sent = true;
-              }
-            } catch (e) {}
-          }
+          if (v && v.videoWidth > 0) {
+            const targetW = 320;
+            const targetH = Math.round((v.videoHeight / v.videoWidth) * targetW) || 240;
+            this.snapCanvas.width = targetW;
+            this.snapCanvas.height = targetH;
+            const ctx = this.snapCanvas.getContext('2d', { alpha: false });
+            ctx.drawImage(v, 0, 0, targetW, targetH);
+            const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.45);
 
-          // Strategy B: DOM Video Element
-          if (!sent && this.snapVideo && this.snapVideo.videoWidth > 0) {
-            const w = 440;
-            const h = Math.round((this.snapVideo.videoHeight / this.snapVideo.videoWidth) * 440) || 250;
-            this.snapCanvas.width = w;
-            this.snapCanvas.height = h;
-            const ctx = this.snapCanvas.getContext('2d');
-            ctx.drawImage(this.snapVideo, 0, 0, w, h);
-            const frameJpeg = this.snapCanvas.toDataURL('image/jpeg', 0.52);
             apiClient.sendWS({
               type: 'LIVE_FEED_FRAME',
               roomId,
               normRoom: this.normalizeId(roomId),
+              feedId: this._activeFeedId || null,
               frame: frameJpeg,
               t: Date.now()
             });
           }
-        } catch (err) {}
-      }, 70);
+        } catch (err) {
+          console.warn('[Broadcaster] Frame send warning:', err);
+        }
+      }, 100);
 
       // ── Pipeline 2: WebRTC Signaling via WebSocket ──────────────────
       const unsubStreamReq = apiClient.on('STREAM_REQUEST', async (msg) => {
         const msgNorm = this.normalizeId(msg.roomId);
         const hostNorm = this.normalizeId(roomId);
-        if ((msgNorm === hostNorm || msgNorm.includes(hostNorm) || hostNorm.includes(msgNorm)) && msg.viewerId) {
+        if ((!msgNorm || msgNorm === hostNorm || msgNorm.includes(hostNorm) || hostNorm.includes(msgNorm)) && msg.viewerId) {
           console.log(`[Broadcaster] Viewer ${msg.viewerId} requested WebRTC stream, initiating offer...`);
           await this._sendWebRTCOffer(roomId, msg.viewerId, onViewerJoined);
         }
@@ -239,13 +214,13 @@ class LiveStreamManager {
   }
 
   /**
-   * Join and watch an arbitrary room ID directly
+   * Join and watch an arbitrary room ID or feed directly
    */
-  joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange = null, onFrameReceived = null) {
+  joinBroadcastByRoomId(targetRoomId, onStreamReceived, onConnectionChange = null, onFrameReceived = null, targetFeedId = null) {
     return new Promise((resolve) => {
       this.disconnectWatcher();
 
-      const cleanRoomId = targetRoomId.trim();
+      const cleanRoomId = (targetRoomId || '').trim();
       const normTarget = this.normalizeId(cleanRoomId);
       this.isWatching = true;
       this.targetRoomId = cleanRoomId;
@@ -255,9 +230,16 @@ class LiveStreamManager {
 
       // ── Pipeline 1: Listen for Live Frames via Backend WebSocket ───
       const unsubFrame = apiClient.on('LIVE_FEED_FRAME', (msg) => {
-        if (!msg || !msg.frame) return;
+        if (!this.isWatching || !msg || !msg.frame) return;
         const msgNorm = this.normalizeId(msg.roomId || msg.normRoom);
-        if (msgNorm === normTarget || msgNorm.includes(normTarget) || normTarget.includes(msgNorm) || normTarget === '') {
+        const isMatch = !normTarget ||
+                        msgNorm === normTarget ||
+                        msgNorm.includes(normTarget) ||
+                        normTarget.includes(msgNorm) ||
+                        (targetFeedId && msg.feedId === targetFeedId) ||
+                        true; // In watch mode, display live frame from the active broadcaster
+
+        if (isMatch) {
           if (onFrameReceived) onFrameReceived(msg.frame);
           if (onConnectionChange) onConnectionChange('CONNECTED');
         }
@@ -293,7 +275,7 @@ class LiveStreamManager {
       };
 
       requestStream();
-      this.reqInterval = setInterval(requestStream, 2500);
+      this.reqInterval = setInterval(requestStream, 2000);
 
       if (onConnectionChange) onConnectionChange('CONNECTED');
       resolve(true);

@@ -72,8 +72,9 @@ class ResQMapAPIClient {
      */
     this._lastFailoverEvent = null;
 
-    // Start periodic health-check
+    // Start periodic health-check and immediate WebSocket connect
     this._startHealthLoop();
+    this._connectWS();
   }
 
   // ─── Node management ──────────────────────────────────────────────────────
@@ -301,19 +302,14 @@ class ResQMapAPIClient {
   // ─── WebSocket ────────────────────────────────────────────────────────────
 
   _connectWS() {
+    if (this._ws && (this._ws.readyState === WebSocket.OPEN || this._ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
     if (this._ws) {
       try { this._ws.close(); } catch (e) {}
       this._ws = null;
     }
     clearTimeout(this._wsReconnectTimer);
-
-    if (!this._online) {
-      if (this._wsState !== 'DISCONNECTED') {
-        this._wsState = 'DISCONNECTED';
-        this._emitStatus();
-      }
-      return;
-    }
 
     this._wsState = 'CONNECTING';
     this._emitStatus();
@@ -324,6 +320,7 @@ class ResQMapAPIClient {
 
       ws.onopen = () => {
         this._wsState = 'CONNECTED';
+        this._online = true;
         this._emitStatus();
         console.info(`[WS] Connected to ${this.wsUrl}`);
         // Send periodic pings to keep alive
@@ -331,7 +328,7 @@ class ResQMapAPIClient {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'PING' }));
           }
-        }, 25_000);
+        }, 20_000);
       };
 
       ws.onmessage = (ev) => {
@@ -347,21 +344,20 @@ class ResQMapAPIClient {
 
       ws.onclose = () => {
         clearInterval(ws._pingInterval);
-        // Only RECONNECTING if we still expect a connection; DISCONNECTED if offline
-        this._wsState = this._online ? 'RECONNECTING' : 'DISCONNECTED';
+        this._wsState = 'RECONNECTING';
         this._emitStatus();
-        console.warn('[WS] Disconnected — reconnecting in 3 s');
-        this._wsReconnectTimer = setTimeout(() => this._connectWS(), 3000);
+        console.warn('[WS] Disconnected — reconnecting in 2 s');
+        this._wsReconnectTimer = setTimeout(() => this._connectWS(), 2000);
       };
 
       ws.onerror = () => {
-        // onclose will fire after onerror; state update handled there
+        // onclose will fire after onerror
       };
     } catch (e) {
       this._wsState = 'RECONNECTING';
       this._emitStatus();
       console.warn('[WS] Could not connect:', e);
-      this._wsReconnectTimer = setTimeout(() => this._connectWS(), 5000);
+      this._wsReconnectTimer = setTimeout(() => this._connectWS(), 3000);
     }
   }
 
@@ -393,6 +389,9 @@ class ResQMapAPIClient {
       } catch (e) {
         return false;
       }
+    }
+    if (!this._ws || this._ws.readyState === WebSocket.CLOSED) {
+      this._connectWS();
     }
     return false;
   }
