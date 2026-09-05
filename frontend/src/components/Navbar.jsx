@@ -11,7 +11,6 @@ import {
   Activity,
   Sparkles,
   BarChart3,
-  RotateCcw,
   FileText,
   Wifi,
   WifiOff,
@@ -40,7 +39,6 @@ export default function Navbar() {
     setIsSafeHouseModalOpen,
     openGovDispatch,
     stats,
-    resetDemoData,
     geminiApiKey,
     isOnline,
     activeNodeUrl,
@@ -477,20 +475,6 @@ export default function Navbar() {
                   <Settings className="w-4 h-4" />
                 </div>
                 <span>AI & System Settings</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-500" />
-            </button>
-
-            {/* Reset Demo Data */}
-            <button
-              onClick={() => handleAction(resetDemoData)}
-              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-400 hover:bg-amber-950/20 hover:text-amber-300 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-lg bg-slate-800 text-amber-400">
-                  <RotateCcw className="w-4 h-4" />
-                </div>
-                <span>Reset Hackathon Data</span>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-500" />
             </button>

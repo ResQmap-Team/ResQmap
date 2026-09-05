@@ -6,7 +6,6 @@ import {
   Key, 
   Server, 
   Sparkles, 
-  RotateCcw, 
   CheckCircle2, 
   ExternalLink,
   ShieldCheck,
@@ -25,7 +24,6 @@ export default function SettingsModal() {
     activeNodeUrl,
     isOnline,
     updateNodes,
-    resetDemoData,
   } = useDisaster();
 
   const [inputKey, setInputKey] = useState(geminiApiKey);
@@ -172,24 +170,7 @@ export default function SettingsModal() {
             </div>
           </div>
 
-          {/* Reset Demo Data */}
-          <div className="pt-2 border-t border-[#1f293d] flex items-center justify-between">
-            <div>
-              <span className="font-bold text-slate-200 block">Reset Demo State</span>
-              <span className="text-[11px] text-slate-400">Restore 8 initial seed disaster incidents around Chennai.</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                resetDemoData();
-                alert("Demo data reset to default seed state.");
-              }}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Reset Data</span>
-            </button>
-          </div>
+
 
           {/* Footer Save Actions */}
           <div className="pt-4 border-t border-[#1f293d] flex items-center justify-end gap-2.5">

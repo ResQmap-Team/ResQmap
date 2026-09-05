@@ -706,29 +706,6 @@ export function DisasterProvider({ children }) {
     }
   };
 
-  const resetDemoData = () => {
-    setIncidents(SEED_INCIDENTS);
-    setSelectedIncident(SEED_INCIDENTS[0]);
-    setActiveResponderIncident(SEED_INCIDENTS[0]);
-    setEmergencyContacts(DEFAULT_EMERGENCY_CONTACTS);
-    setSafeHouses(SEED_SAFEHOUSES);
-    setVolunteerProfile(DEFAULT_VOLUNTEER_PROFILE);
-    setVolunteerStatus('AVAILABLE');
-    setVolunteerImpact(DEFAULT_VOLUNTEER_IMPACT);
-    setVolunteerTasks(generateTasksFromIncidents(
-      SEED_INCIDENTS,
-      DEFAULT_VOLUNTEER_PROFILE.latitude,
-      DEFAULT_VOLUNTEER_PROFILE.longitude,
-      DEFAULT_VOLUNTEER_PROFILE.skills
-    ));
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_INCIDENTS));
-    localStorage.setItem(EMERGENCY_CONTACTS_STORAGE, JSON.stringify(DEFAULT_EMERGENCY_CONTACTS));
-    localStorage.setItem(SAFEHOUSE_STORAGE, JSON.stringify(SEED_SAFEHOUSES));
-    localStorage.setItem(VOLUNTEER_PROFILE_STORAGE, JSON.stringify(DEFAULT_VOLUNTEER_PROFILE));
-    localStorage.setItem(VOLUNTEER_IMPACT_STORAGE, JSON.stringify(DEFAULT_VOLUNTEER_IMPACT));
-  };
-
   // Compute live triage statistics
   const stats = {
     total: incidents.length,
@@ -821,7 +798,6 @@ export function DisasterProvider({ children }) {
       updateIncidentStatus,
       assignResponder,
       deleteIncident,
-      resetDemoData,
       stats,
       // ── SOS queue ─────────────────────────────────────────────────────────
       sosQueue,
