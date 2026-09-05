@@ -286,16 +286,16 @@ export default function LiveMap() {
         </div>
 
         {/* Right Map Controls: Search & Layer Switcher */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-2 pointer-events-auto flex-wrap sm:flex-nowrap justify-between sm:justify-end w-full md:w-auto">
           {/* Search Input */}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Search location or ID..."
               value={filters.searchQuery}
               onChange={e => setFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-              className="bg-[#111827]/90 backdrop-blur-md text-xs text-white pl-8 pr-3 py-2 rounded-xl border border-[#1f293d] focus:outline-none focus:border-rose-500 w-44 sm:w-56 shadow-xl"
+              className="bg-[#111827]/90 backdrop-blur-md text-xs text-white pl-8 pr-3 py-2 rounded-xl border border-[#1f293d] focus:outline-none focus:border-rose-500 w-full sm:w-52 shadow-xl"
             />
           </div>
 

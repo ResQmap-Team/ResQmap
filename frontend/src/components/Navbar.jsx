@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDisaster } from '../context/DisasterContext';
 import resqEmblem from '../assets/resq_emblem.png';
 import { 
@@ -21,6 +21,12 @@ import {
   PhoneCall,
   Home,
   Building2,
+  Menu,
+  X,
+  ChevronRight,
+  ShieldCheck,
+  Flame,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -40,232 +46,519 @@ export default function Navbar() {
     activeNodeUrl,
   } = useDisaster();
 
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Close drawer on ESC key or when window is resized to large
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setIsDrawerOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleNavSelect = (viewName) => {
+    setActiveView(viewName);
+    setIsDrawerOpen(false);
+  };
+
+  const handleAction = (callback) => {
+    setIsDrawerOpen(false);
+    callback();
+  };
 
   return (
-    <header className="sticky top-0 z-[2000] bg-[#070b14]/90 backdrop-blur-xl border-b border-white/[0.08] shadow-2xl">
-      {/* Emergency Broadcast Ticker */}
-      <div className="bg-gradient-to-r from-rose-950/80 via-slate-950 to-rose-950/80 px-4 py-1 border-b border-rose-900/30 text-xs flex items-center justify-between text-rose-300">
-        <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
-          <span className="flex h-2 w-2 relative shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-          </span>
-          <span className="font-semibold text-rose-400 uppercase tracking-wider text-[10px] bg-rose-900/40 px-1.5 py-0.5 rounded border border-rose-700/50 shrink-0">
-            LIVE TRIAGE FEED
-          </span>
-          <span className="truncate text-slate-300">
-            Active Disasters: <b className="text-rose-400 font-mono">{stats.critical} Critical</b>, <b className="text-amber-400 font-mono">{stats.high} High</b> | First Responders Deployed: <b className="text-emerald-400 font-mono">{stats.activeDispatches} Units</b> | AI False Alarms Blocked: <b className="text-sky-400 font-mono">{stats.falseAlarms}</b>
-          </span>
-        </div>
-        <div className="hidden md:flex items-center gap-3 font-mono text-[11px] text-slate-400 shrink-0">
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-sky-400" />
-            AI Damage Assessment: <span className={geminiApiKey ? "text-emerald-400 font-bold" : "text-sky-400 font-bold"}>{geminiApiKey ? "Active" : "Standard Mode"}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2.5 sm:gap-3">
-        {/* Brand with Attached RESQ Firefighter Emblem */}
-        <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => setActiveView('map')}>
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-rose-950/50 border border-slate-700/80 bg-slate-900">
-            <img src={resqEmblem} alt="RESQ SINCE 2026" className="w-full h-full object-cover" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#070b14]"></span>
+    <>
+      <header className="sticky top-0 z-[2000] bg-[#070b14]/90 backdrop-blur-xl border-b border-white/[0.08] shadow-2xl">
+        {/* Emergency Broadcast Ticker */}
+        <div className="bg-gradient-to-r from-rose-950/80 via-slate-950 to-rose-950/80 px-3 sm:px-4 py-1 border-b border-rose-900/30 text-xs flex items-center justify-between text-rose-300">
+          <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+            <span className="flex h-2 w-2 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            <span className="font-semibold text-rose-400 uppercase tracking-wider text-[10px] bg-rose-900/40 px-1.5 py-0.5 rounded border border-rose-700/50 shrink-0">
+              LIVE TRIAGE FEED
+            </span>
+            <span className="truncate text-slate-300 text-[11px] sm:text-xs">
+              Active: <b className="text-rose-400 font-mono">{stats.critical} P0</b>, <b className="text-amber-400 font-mono">{stats.high} P1</b> | Units: <b className="text-emerald-400 font-mono">{stats.activeDispatches}</b> | Filtered: <b className="text-sky-400 font-mono">{stats.falseAlarms}</b>
+            </span>
           </div>
-          <div className="hidden min-[380px]:block">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                RESQ<span className="text-rose-500 font-mono">MAP</span>
-              </span>
-              <span className="text-[9px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 bg-slate-800/80 text-slate-300 border border-slate-700 rounded">
-                2026
-              </span>
+          <div className="hidden md:flex items-center gap-3 font-mono text-[11px] text-slate-400 shrink-0">
+            <span className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-sky-400" />
+              AI Vision: <span className={geminiApiKey ? "text-emerald-400 font-bold" : "text-sky-400 font-bold"}>{geminiApiKey ? "Active" : "Standard"}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Main Navigation Bar */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2.5 sm:gap-3">
+          
+          {/* Left: 3-Lines Hamburger Menu Button + Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* 3-Lines Hamburger Menu Button */}
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              aria-label="Open Navigation Menu"
+              className="p-2.5 rounded-xl bg-[#0f172a] hover:bg-slate-800 border border-slate-700/80 text-white shadow-lg transition-all active:scale-95 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <Menu className="w-5 h-5 text-slate-200" />
+            </button>
+
+            {/* Brand Logo */}
+            <div className="flex items-center gap-2.5 cursor-pointer shrink-0" onClick={() => setActiveView('map')}>
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-rose-950/50 border border-slate-700/80 bg-slate-900">
+                <img src={resqEmblem} alt="RESQ SINCE 2026" className="w-full h-full object-cover" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#070b14]"></span>
+              </div>
+              <div className="hidden min-[400px]:block">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+                    RESQ<span className="text-rose-500 font-mono">MAP</span>
+                  </span>
+                  <span className="text-[9px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 bg-slate-800/80 text-slate-300 border border-slate-700 rounded">
+                    2026
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* UNIFIED SINGLE ROW / SLIDER FOR ALL FEATURES */}
-        <nav className="flex-1 min-w-0 flex items-center bg-[#0d1527]/80 backdrop-blur-md p-1 rounded-xl border border-white/[0.08] overflow-x-auto no-scrollbar gap-1">
-          {/* 1. Live Response Map */}
-          <button
-            onClick={() => setActiveView('map')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'map'
-                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>Live Map</span>
-          </button>
+          {/* Desktop Primary Navigation (Visible on xl+ screens) */}
+          <nav className="hidden xl:flex items-center bg-[#0d1527]/80 backdrop-blur-md p-1 rounded-xl border border-white/[0.08] gap-1">
+            <button
+              onClick={() => setActiveView('map')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'map'
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Live Map</span>
+            </button>
 
-          {/* 2. All Reports Feed */}
-          <button
-            onClick={() => setActiveView('reports')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'reports'
-                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>All Reports</span>
-            <span className="px-1.5 py-0.2 bg-black/40 rounded-full text-[10px] font-mono">
-              {stats.total}
-            </span>
-          </button>
-
-          {/* 3. SOS Priority Queue */}
-          <button
-            onClick={() => setActiveView('sos')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'sos'
-                ? 'bg-rose-700 text-white shadow-md shadow-rose-700/40 ring-1 ring-rose-500/50'
-                : 'text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-700/20'
-            }`}
-          >
-            <Siren className="w-3.5 h-3.5" />
-            <span>SOS Queue</span>
-            {stats.activeSOS > 0 && (
-              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                {stats.activeSOS}
+            <button
+              onClick={() => setActiveView('reports')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'reports'
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>All Reports</span>
+              <span className="px-1.5 py-0.2 bg-black/40 rounded-full text-[10px] font-mono">
+                {stats.total}
               </span>
-            )}
-          </button>
+            </button>
 
-          {/* 4. Responder Live Feed */}
-          <button
-            onClick={() => setActiveView('responder')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'responder'
-                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Video className="w-3.5 h-3.5 text-sky-300 animate-pulse" />
-            <span>Live Feed</span>
-            {stats.activeDispatches > 0 && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            )}
-          </button>
+            <button
+              onClick={() => setActiveView('sos')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'sos'
+                  ? 'bg-rose-700 text-white shadow-md shadow-rose-700/40 ring-1 ring-rose-500/50'
+                  : 'text-rose-300 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-700/20'
+              }`}
+            >
+              <Siren className="w-3.5 h-3.5" />
+              <span>SOS Queue</span>
+              {stats.activeSOS > 0 && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-mono">
+                  {stats.activeSOS}
+                </span>
+              )}
+            </button>
 
-          {/* 5. Volunteer Hub Mesh */}
-          <button
-            onClick={() => setActiveView('volunteers')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'volunteers'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <HandHeart className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Volunteer Hub</span>
-            <span className="px-1.5 py-0.2 bg-indigo-950/80 border border-indigo-500/40 text-[10px] font-mono text-indigo-300 rounded">
-              {stats.volunteerTasksAvailable}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveView('responder')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'responder'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Video className="w-3.5 h-3.5 text-sky-300 animate-pulse" />
+              <span>Live Feed</span>
+            </button>
 
-          {/* 6. Fleet Analytics */}
-          <button
-            onClick={() => setActiveView('analytics')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-              activeView === 'analytics'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5 text-purple-400" />
-            <span>Fleet Analytics</span>
-          </button>
+            <button
+              onClick={() => setActiveView('volunteers')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'volunteers'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <HandHeart className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Volunteer Hub</span>
+            </button>
 
-          {/* 7. SafeHouse Relief Shelters */}
-          <button
-            onClick={() => setIsSafeHouseModalOpen(true)}
-            title="Find Nearest SafeHouse Shelter"
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-emerald-300 hover:bg-emerald-950/40 border border-transparent hover:border-emerald-500/30 transition-all duration-150 active:scale-95"
-          >
-            <Home className="w-3.5 h-3.5 text-emerald-400" />
-            <span>SafeHouse</span>
-          </button>
+            <button
+              onClick={() => setActiveView('analytics')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'analytics'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 text-purple-400" />
+              <span>Fleet Analytics</span>
+            </button>
+          </nav>
 
-          {/* 8. Emergency Helplines */}
-          <button
-            onClick={() => setIsEmergencyContactsOpen(true)}
-            title="National & State Emergency Helplines"
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-rose-300 hover:bg-rose-950/40 border border-transparent hover:border-rose-500/30 transition-all duration-150 active:scale-95"
-          >
-            <PhoneCall className="w-3.5 h-3.5 text-rose-400" />
-            <span>Helplines</span>
-          </button>
+          {/* Right Action & System Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Submit SOS Button */}
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg shadow-rose-900/30 border border-rose-400/40 transition-transform active:scale-95 whitespace-nowrap"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Submit SOS</span>
+            </button>
 
-          {/* 9. Government / Authority Escalation */}
-          <button
-            onClick={() => openGovDispatch()}
-            title="Escalate to NDMA / NDRF / State Authorities"
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-amber-300 hover:bg-amber-950/40 border border-transparent hover:border-amber-500/30 transition-all duration-150 active:scale-95"
-          >
-            <Building2 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Gov Forward</span>
-          </button>
-        </nav>
+            {/* Physical System Status */}
+            <button
+              onClick={() => setIsResilienceModalOpen(true)}
+              title={isOnline ? `Connected to ${activeNodeUrl}` : 'Offline'}
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold border transition-colors ${
+                isOnline
+                  ? 'bg-emerald-950/60 border-emerald-600/40 text-emerald-300 hover:bg-emerald-900/60'
+                  : 'bg-rose-950/60 border-rose-600/40 text-rose-300 hover:bg-rose-900/60'
+              }`}
+            >
+              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+              <span className="max-w-[85px] truncate">
+                {isOnline
+                  ? (() => { try { const u = new URL(activeNodeUrl); return `${u.hostname}`; } catch { return 'Online'; } })()
+                  : 'Offline'
+                }
+              </span>
+            </button>
 
-        {/* Global Action & System Controls (Far Right) */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Main Dominant Citizen SOS Button */}
-          <button
-            onClick={() => setIsReportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-rose-900/30 border border-rose-400/40 transition-transform active:scale-95 whitespace-nowrap"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">Submit SOS</span>
-            <span className="sm:hidden">SOS</span>
-          </button>
+            {/* Settings */}
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              title="System Settings"
+              className="p-2 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1f293d] text-slate-300 hover:text-white transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
 
-          {/* Live connection status badge */}
-          <button
-            onClick={() => setIsResilienceModalOpen(true)}
-            title={isOnline ? `Connected to ${activeNodeUrl} — click to view all machines` : 'All backend machines unreachable — click for details'}
-            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold border transition-colors ${
-              isOnline
-                ? 'bg-emerald-950/60 border-emerald-600/40 text-emerald-300 hover:bg-emerald-900/60'
-                : 'bg-rose-950/60 border-rose-600/40 text-rose-300 hover:bg-rose-900/60'
-            }`}
-          >
-            {isOnline
-              ? <Wifi className="w-3.5 h-3.5" />
-              : <WifiOff className="w-3.5 h-3.5" />
-            }
-            <span className="max-w-[90px] truncate">
-              {isOnline
-                ? (() => { try { const u = new URL(activeNodeUrl); return `${u.hostname}`; } catch { return 'connected'; } })()
-                : 'Offline'
-              }
-            </span>
-          </button>
+      {/* ─── SLIDE-FROM-LEFT MOBILE & TABLET NAVIGATION DRAWER ───────────── */}
+      {isDrawerOpen && (
+        <div 
+          className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+          onClick={() => setIsDrawerOpen(false)}
+        />
+      )}
 
-          {/* System Settings */}
-          <button
-            onClick={() => setIsSettingsModalOpen(true)}
-            title="API Key & System Settings"
-            className="p-2 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1f293d] text-slate-300 hover:text-white transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+      <aside
+        className={`fixed top-0 left-0 bottom-0 z-[9999] w-[320px] max-w-[85vw] bg-[#0c1220] border-r border-[#1f293d] shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+          isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Drawer Header */}
+        <div className="p-4 border-b border-[#1f293d] bg-[#101828] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700/80 overflow-hidden shadow">
+              <img src={resqEmblem} alt="RESQ" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-sm text-white tracking-tight">
+                  RESQ<span className="text-rose-500 font-mono">MAP</span>
+                </span>
+                <span className="text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded">
+                  2026
+                </span>
+              </div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                <span className="text-[10px] text-slate-400 font-mono font-medium">
+                  {isOnline ? 'System Online' : 'Backend Offline'}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          {/* Reset Demo Data */}
           <button
-            onClick={resetDemoData}
-            title="Reset to Initial Hackathon Demo Data"
-            className="p-2 rounded-xl bg-[#111827] hover:bg-slate-800 border border-[#1f293d] text-slate-400 hover:text-amber-300 transition-colors"
+            onClick={() => setIsDrawerOpen(false)}
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
-            <RotateCcw className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-      </div>
-    </header>
+
+        {/* Drawer Scrollable Body */}
+        <div className="p-4 space-y-6 overflow-y-auto flex-1 text-xs">
+          
+          {/* Main Dominant Action: Submit Emergency SOS */}
+          <div>
+            <button
+              onClick={() => handleAction(() => setIsReportModalOpen(true))}
+              className="w-full p-3 bg-gradient-to-r from-rose-600 via-rose-700 to-rose-600 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl font-bold shadow-lg shadow-rose-950/50 border border-rose-400/40 flex items-center justify-center gap-2 active:scale-98 transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Report Emergency / Submit SOS</span>
+            </button>
+          </div>
+
+          {/* Section 1: Command & Operations */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 block">
+              Core Operations
+            </span>
+
+            {/* 1. Live Map */}
+            <button
+              onClick={() => handleNavSelect('map')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'map'
+                  ? 'bg-rose-600/20 text-rose-400 border border-rose-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'map' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <span>Live Response Map</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+
+            {/* 2. All Reports */}
+            <button
+              onClick={() => handleNavSelect('reports')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'reports'
+                  ? 'bg-rose-600/20 text-rose-400 border border-rose-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'reports' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  <FileText className="w-4 h-4" />
+                </div>
+                <span>All Disaster Reports</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px] font-bold">
+                {stats.total}
+              </span>
+            </button>
+
+            {/* 3. SOS Priority Queue */}
+            <button
+              onClick={() => handleNavSelect('sos')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'sos'
+                  ? 'bg-rose-600/20 text-rose-400 border border-rose-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'sos' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-400'}`}>
+                  <Siren className="w-4 h-4" />
+                </div>
+                <span>SOS Priority Queue</span>
+              </div>
+              {stats.activeSOS > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono text-[10px] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                  {stats.activeSOS}
+                </span>
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+
+            {/* 4. Responder Live Feed */}
+            <button
+              onClick={() => handleNavSelect('responder')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'responder'
+                  ? 'bg-sky-600/20 text-sky-400 border border-sky-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'responder' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-sky-400'}`}>
+                  <Video className="w-4 h-4" />
+                </div>
+                <span>First Responder Video</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
+
+            {/* 5. Volunteer Hub */}
+            <button
+              onClick={() => handleNavSelect('volunteers')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'volunteers'
+                  ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'volunteers' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-indigo-400'}`}>
+                  <HandHeart className="w-4 h-4" />
+                </div>
+                <span>Volunteer Mesh Hub</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700/40 font-mono text-[10px] font-bold">
+                {stats.volunteerTasksAvailable}
+              </span>
+            </button>
+
+            {/* 6. Fleet Analytics */}
+            <button
+              onClick={() => handleNavSelect('analytics')}
+              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                activeView === 'analytics'
+                  ? 'bg-purple-600/20 text-purple-400 border border-purple-500/40 font-bold'
+                  : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${activeView === 'analytics' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-purple-400'}`}>
+                  <Users className="w-4 h-4" />
+                </div>
+                <span>Fleet & Incident Analytics</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+
+          {/* Section 2: Relief & Emergency Contacts */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 block">
+              Relief & Authorities
+            </span>
+
+            {/* SafeHouses */}
+            <button
+              onClick={() => handleAction(() => setIsSafeHouseModalOpen(true))}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-300 hover:bg-emerald-950/30 hover:text-emerald-300 transition-colors group border border-transparent hover:border-emerald-600/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-emerald-950/60 text-emerald-400 border border-emerald-700/40">
+                  <Home className="w-4 h-4" />
+                </div>
+                <span>SafeHouse Shelters</span>
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded">
+                Find Bed
+              </span>
+            </button>
+
+            {/* Emergency Contacts */}
+            <button
+              onClick={() => handleAction(() => setIsEmergencyContactsOpen(true))}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-300 hover:bg-rose-950/30 hover:text-rose-300 transition-colors group border border-transparent hover:border-rose-600/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-rose-950/60 text-rose-400 border border-rose-700/40">
+                  <PhoneCall className="w-4 h-4" />
+                </div>
+                <span>Emergency Helplines</span>
+              </div>
+              <span className="text-[10px] font-semibold text-rose-400 bg-rose-950/50 px-2 py-0.5 rounded">
+                112 / NDRF
+              </span>
+            </button>
+
+            {/* Gov Dispatch */}
+            <button
+              onClick={() => handleAction(() => openGovDispatch())}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-300 hover:bg-amber-950/30 hover:text-amber-300 transition-colors group border border-transparent hover:border-amber-600/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-amber-950/60 text-amber-400 border border-amber-700/40">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <span>Gov / NDMA Escalation</span>
+              </div>
+              <span className="text-[10px] font-semibold text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded">
+                Dispatch
+              </span>
+            </button>
+          </div>
+
+          {/* Section 3: Physical System & Resilience */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 px-2 block">
+              System Resilience
+            </span>
+
+            {/* Physical System Status */}
+            <button
+              onClick={() => handleAction(() => setIsResilienceModalOpen(true))}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors border border-slate-800"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${isOnline ? 'bg-emerald-950 text-emerald-400 border border-emerald-600/30' : 'bg-rose-950 text-rose-400 border border-rose-600/30'}`}>
+                  {isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+                </div>
+                <div className="text-left">
+                  <span className="block font-semibold">Backend Hosts</span>
+                  <span className="text-[10px] text-slate-500 font-mono truncate max-w-[120px] block">
+                    {activeNodeUrl}
+                  </span>
+                </div>
+              </div>
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                isOnline ? 'bg-emerald-950 text-emerald-300 border-emerald-600/40' : 'bg-rose-950 text-rose-300 border-rose-600/40'
+              }`}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </span>
+            </button>
+
+            {/* Settings */}
+            <button
+              onClick={() => handleAction(() => setIsSettingsModalOpen(true))}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-300 hover:bg-slate-800/60 hover:text-white transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-slate-800 text-slate-400">
+                  <Settings className="w-4 h-4" />
+                </div>
+                <span>AI & System Settings</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+
+            {/* Reset Demo Data */}
+            <button
+              onClick={() => handleAction(resetDemoData)}
+              className="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-400 hover:bg-amber-950/20 hover:text-amber-300 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-lg bg-slate-800 text-amber-400">
+                  <RotateCcw className="w-4 h-4" />
+                </div>
+                <span>Reset Hackathon Data</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* Drawer Footer Summary */}
+        <div className="p-3 border-t border-[#1f293d] bg-[#0a0e17] text-[11px] text-slate-400 font-mono flex items-center justify-between">
+          <span>Triage: <b className="text-rose-400">{stats.p0Critical} P0</b> · <b className="text-amber-400">{stats.p1High} P1</b></span>
+          <span className="text-slate-500">ResQMap v1.0</span>
+        </div>
+      </aside>
+    </>
   );
 }
+
 
 
