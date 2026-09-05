@@ -231,9 +231,22 @@ async def _find_nearest_incident(
     return nearest, nearest_dist
 
 
-# ─── HEALTH ──────────────────────────────────────────────────────────────────
+# ─── HEALTH & ROOT ───────────────────────────────────────────────────────────
+
+@app.get("/")
+@app.head("/")
+async def root():
+    """Root status endpoint for uptime monitors and load balancers."""
+    return {
+        "status": "ok",
+        "service": "ResQMap AI Emergency Platform",
+        "version": "1.0.0",
+        "health_check": "/api/health"
+    }
+
 
 @app.get("/api/health")
+@app.head("/api/health")
 async def health():
     """Health check — used by frontends for physical-system failover detection."""
     try:
