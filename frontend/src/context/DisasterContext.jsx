@@ -329,8 +329,12 @@ export function DisasterProvider({ children }) {
   /** Upsert a single feed record into activeFeeds state. */
   const _upsertFeed = useCallback((feed) => {
     if (!feed?.id) return;
+    if (feed.status === 'ENDED') {
+      setActiveFeeds(prev => prev.filter(f => f.id !== feed.id && f.peer_room_id !== feed.peer_room_id));
+      return;
+    }
     setActiveFeeds(prev => {
-      const idx = prev.findIndex(f => f.id === feed.id);
+      const idx = prev.findIndex(f => f.id === feed.id || (feed.peer_room_id && f.peer_room_id === feed.peer_room_id));
       if (idx === -1) return [feed, ...prev];
       const next = [...prev];
       next[idx] = feed;
@@ -340,16 +344,25 @@ export function DisasterProvider({ children }) {
 
   /** Remove a feed from activeFeeds state (used when feed ends). */
   const _removeFeed = useCallback((feed) => {
-    if (!feed?.id) return;
-    // Keep ENDED feeds out of the active list
-    setActiveFeeds(prev => prev.filter(f => f.id !== feed.id));
+    if (!feed?.id && !feed?.peer_room_id) return;
+    setActiveFeeds(prev => prev.filter(f => f.id !== feed.id && f.peer_room_id !== feed.peer_room_id));
   }, []);
 
   // Load current active feeds from backend on mount
   useEffect(() => {
     apiClient.getFeeds().then((data) => {
-      if (Array.isArray(data)) setActiveFeeds(data);
-    }).catch(() => {}); // non-fatal: backend may not be reachable yet
+      if (Array.isArray(data)) {
+        const seen = new Set();
+        const unique = data.filter(f => {
+          if (!f || f.status === 'ENDED') return false;
+          const key = f.peer_room_id || f.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setActiveFeeds(unique);
+      }
+    }).catch(() => {});
   }, []);
 
   // Subscribe to feed WebSocket events

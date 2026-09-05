@@ -153,68 +153,27 @@ export default function ResponderHub() {
     return () => clearInterval(timer);
   }, []);
 
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+  const jitsiContainerRef = useRef(null);
 
   const incident = activeResponderIncident || incidents[0];
   const prioConf = PRIORITY_CONFIG[incident?.priority] || SEVERITY_CONFIG[incident?.severity] || PRIORITY_CONFIG.P1;
-  const defaultRoomId = incident ? liveStreamService.getPeerRoomId(incident.id) : 'resqnet-stream';
+  const defaultRoomId = incident ? liveStreamService.getRoomName(incident.id) : 'resqmap-emergency-hub';
   const displayRoomId = activeBroadcastRoomId || defaultRoomId;
 
-  // Cleanup WebRTC and local camera on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      liveStreamService.stopBroadcast();
-      liveStreamService.disconnectWatcher();
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-      }
+      liveStreamService.destroy();
     };
-  }, [cameraStream]);
-
-  // Attach local cameraStream to <video> element
-  useEffect(() => {
-    if (cameraStream && localVideoRef.current) {
-      localVideoRef.current.srcObject = cameraStream;
-      localVideoRef.current.play().catch(e => console.warn('Local play error:', e));
-    }
-  }, [cameraStream, streamMode]);
-
-  // Attach remote video stream to <video> element with safe mobile playback
-  useEffect(() => {
-    if (remoteStream && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(err => {
-        console.warn('[ResponderHub] Autoplay with audio restricted on mobile, retrying muted...', err);
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().catch(e => console.error('Playback error:', e));
-        }
-      });
-    }
-  }, [remoteStream, streamMode]);
+  }, []);
 
   // Start Broadcasting from this device's camera (Responder role)
   const handleStartBroadcast = async () => {
     try {
       setConnectionStatus('CONNECTING');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: { ideal: 'environment' }, 
-          width: { ideal: 640, max: 1280 }, 
-          height: { ideal: 480, max: 720 } 
-        },
-        audio: true
-      });
-
       setStreamMode('broadcast');
       setIsBroadcasting(true);
-      setCameraStream(stream);
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-        localVideoRef.current.play().catch(() => {});
-      }
+      setIsWatchingLive(false);
 
       const meta = {
         responderId: responderId || null,
@@ -222,20 +181,23 @@ export default function ResponderHub() {
         longitude:   gpsPosition?.longitude ?? null,
       };
 
-      const result = await liveStreamService.startBroadcast(
-        incident.id, 
-        stream, 
-        (count) => { setViewerCount(count); }, 
-        meta,
-        localVideoRef.current
-      );
+      // Slight timeout to ensure container DOM element is mounted
+      setTimeout(async () => {
+        if (!jitsiContainerRef.current) return;
+        const result = await liveStreamService.startBroadcast(
+          jitsiContainerRef.current,
+          incident.id,
+          (count) => { setViewerCount(Math.max(0, count)); },
+          meta
+        );
 
-      setActiveFeedId(result?.feedId ?? null);
-      setActiveBroadcastRoomId(result?.roomId ?? defaultRoomId);
-      setConnectionStatus('LIVE_BROADCASTING');
+        setActiveFeedId(result?.feedId ?? null);
+        setActiveBroadcastRoomId(result?.roomName ?? defaultRoomId);
+        setConnectionStatus('LIVE_BROADCASTING');
+      }, 100);
     } catch (err) {
       console.warn('Could not start camera broadcast:', err);
-      alert('Camera or microphone permission denied or unavailable. Ensure the browser has camera permission and the page is served over HTTPS (required on Android).');
+      alert('Camera or microphone permission denied or unavailable.');
       setStreamMode('idle');
       setIsBroadcasting(false);
       setActiveFeedId(null);
@@ -247,10 +209,6 @@ export default function ResponderHub() {
   // Stop Broadcasting
   const handleStopBroadcast = () => {
     liveStreamService.stopBroadcast();
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-      setCameraStream(null);
-    }
     setIsBroadcasting(false);
     setActiveFeedId(null);
     setActiveBroadcastRoomId('');
@@ -263,30 +221,22 @@ export default function ResponderHub() {
   const handleWatchFeed = async (feedToWatch = null) => {
     const targetFeed = feedToWatch || selectedFeed || (activeFeeds.length > 0 ? activeFeeds[0] : null);
     const targetRoomId = targetFeed?.peer_room_id || defaultRoomId;
-    const targetFeedId = targetFeed?.id || null;
     try {
       setConnectionStatus('CONNECTING_PEER');
       setStreamMode('watch');
       setIsWatchingLive(true);
-      setRemoteFrame(null);
+      setIsBroadcasting(false);
       if (targetFeed) setSelectedFeed(targetFeed);
 
-      await liveStreamService.joinBroadcastByRoomId(
-        targetRoomId,
-        (stream) => {
-          setRemoteStream(stream);
-          setConnectionStatus('CONNECTED_WATCHING');
-        },
-        (status) => {
-          if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
-          else if (status === 'ERROR') setConnectionStatus('FAILED');
-        },
-        (frame) => {
-          setRemoteFrame(frame);
-          setConnectionStatus('CONNECTED_WATCHING');
-        },
-        targetFeedId
-      );
+      setTimeout(async () => {
+        if (!jitsiContainerRef.current) return;
+        await liveStreamService.watchBroadcast(
+          jitsiContainerRef.current,
+          targetRoomId,
+          (count) => { setViewerCount(Math.max(0, count)); }
+        );
+        setConnectionStatus('CONNECTED_WATCHING');
+      }, 100);
     } catch (err) {
       console.warn('Could not connect to feed:', err);
       setConnectionStatus('FAILED');
@@ -301,24 +251,18 @@ export default function ResponderHub() {
       setConnectionStatus('CONNECTING_PEER');
       setStreamMode('watch');
       setIsWatchingLive(true);
+      setIsBroadcasting(false);
       setSelectedFeed(null);
-      setRemoteFrame(null);
 
-      await liveStreamService.joinBroadcastByRoomId(
-        targetRoom,
-        (stream) => {
-          setRemoteStream(stream);
-          setConnectionStatus('CONNECTED_WATCHING');
-        },
-        (status) => {
-          if (status === 'DISCONNECTED') setConnectionStatus('BROADCASTER_OFFLINE');
-          else if (status === 'ERROR') setConnectionStatus('FAILED');
-        },
-        (frame) => {
-          setRemoteFrame(frame);
-          setConnectionStatus('CONNECTED_WATCHING');
-        }
-      );
+      setTimeout(async () => {
+        if (!jitsiContainerRef.current) return;
+        await liveStreamService.watchBroadcast(
+          jitsiContainerRef.current,
+          targetRoom,
+          (count) => { setViewerCount(Math.max(0, count)); }
+        );
+        setConnectionStatus('CONNECTED_WATCHING');
+      }, 100);
     } catch (err) {
       console.warn('Could not connect to room:', err);
       setConnectionStatus('FAILED');
@@ -334,12 +278,11 @@ export default function ResponderHub() {
   // Disconnect watching
   const handleDisconnectWatcher = () => {
     liveStreamService.disconnectWatcher();
-    setRemoteStream(null);
-    setRemoteFrame(null);
     setIsWatchingLive(false);
     setSelectedFeed(null);
     setStreamMode('idle');
     setConnectionStatus('IDLE');
+    setViewerCount(0);
   };
 
   const handleCopyRoomLink = () => {
@@ -441,88 +384,16 @@ export default function ResponderHub() {
         {/* Left 2 Cols: Live Video HUD Stream */}
         <div className="lg:col-span-2 relative rounded-2xl overflow-hidden border border-[#1f293d] bg-black aspect-video flex items-center justify-center shadow-2xl">
           
-          {/* Mode 1: Local Responder Broadcasting from Phone Camera */}
-          {streamMode === 'broadcast' && (
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${
-                hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
-                hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
-              }`}
-            />
-          )}
+          {/* Active Live Video Stream Container (Enterprise Jitsi WebRTC) */}
+          <div
+            ref={jitsiContainerRef}
+            className={`w-full h-full ${streamMode === 'idle' ? 'hidden' : 'block'} ${
+              hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
+              hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
+            }`}
+          />
 
-          {/* Mode 2: Watching Colleague's Live Stream from Another Phone/Laptop via WebRTC */}
-          {streamMode === 'watch' && (
-            <>
-              {remoteStream ? (
-                <div className="relative w-full h-full flex items-center justify-center">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className={`w-full h-full object-cover ${
-                      hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
-                      hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
-                    }`}
-                  />
-                  {/* Quick Unmute / Audio indicator if audio muted */}
-                  <button
-                    onClick={() => {
-                      if (remoteVideoRef.current) {
-                        remoteVideoRef.current.muted = !remoteVideoRef.current.muted;
-                      }
-                    }}
-                    className="absolute top-4 left-4 z-20 px-2 py-1 bg-black/70 hover:bg-black text-slate-300 text-[10px] rounded-lg border border-slate-700 font-mono flex items-center gap-1 backdrop-blur-sm"
-                  >
-                    <Volume2 className="w-3 h-3 text-sky-400" />
-                    <span>Toggle Audio</span>
-                  </button>
-                </div>
-              ) : remoteFrame ? (
-                <div className="relative w-full h-full flex items-center justify-center bg-black">
-                  <img
-                    src={remoteFrame}
-                    alt="Live Responder Camera"
-                    className={`w-full h-full object-cover ${
-                      hudFilter === 'night' ? 'brightness-125 contrast-150 hue-rotate-90 saturate-200' :
-                      hudFilter === 'thermal' ? 'invert contrast-200 saturate-200' : ''
-                    }`}
-                  />
-                  <div className="absolute top-4 left-4 z-20 px-2.5 py-1 bg-emerald-950/90 text-emerald-300 text-[10px] rounded-lg border border-emerald-600/50 font-mono font-bold flex items-center gap-1.5 backdrop-blur-sm shadow-lg animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>LIVE STREAM (DATA LINK)</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-6 space-y-3 z-10">
-                  <Cast className="w-10 h-10 text-sky-400 animate-bounce" />
-                  <div>
-                    <h4 className="text-sm font-bold text-white">Connecting to Colleague's Live Camera Feed...</h4>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                      Waiting for responder on scene to broadcast from Room <code className="text-sky-300 font-mono font-bold">{displayRoomId}</code>.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono bg-sky-950/80 text-sky-300 px-3 py-1 rounded-full border border-sky-600/40 animate-pulse">
-                      Dual-Handshake WebRTC Active
-                    </span>
-                    <button
-                      onClick={() => handleWatchFeed()}
-                      className="text-[10px] font-mono bg-sky-600 hover:bg-sky-500 text-white px-3 py-1 rounded-full font-bold transition-all"
-                    >
-                      Retry Connection
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Mode 3: Idle — no active stream, prompt to select a feed or broadcast */}
+          {/* Mode: Idle — no active stream, prompt to select a feed or broadcast */}
           {streamMode === 'idle' && (
             <div className="flex flex-col items-center justify-center text-center p-6 space-y-3 w-full h-full">
               <Tv className="w-10 h-10 text-slate-600" />
